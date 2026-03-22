@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Memory Tunnel</title>
+  <meta name="description" content="Someone wants to share memories with you." />
+
+  <!-- Open Graph (iMessage / Twitter link preview) -->
+  <% if @memory %>
+  <meta property="og:image"       content="<%= @preview_url %>" />
+  <meta property="og:title"       content="<%= "#{@sender.display_name} is sharing a memory with you." %>" />
+  <meta property="og:description" content="Open in Memory Tunnel to see it." />
+  <% end %>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #F5EAD8;
+      --surface: #EDE0CC;
+      --label:   #1C1C1E;
+      --secondary: #636366;
+      --accent:  #C8956C;
+      --radius:  12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--label);
+      font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue", sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 0 env(safe-area-inset-bottom, 24px);
+    }
+
+    .photo {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+    .photo img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .photo::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.55) 30%, transparent 70%);
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 430px;
+      padding: 24px 24px 40px;
+      color: #fff;
+    }
+
+    .sender {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+
+    .headline {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 20px;
+    }
+
+    .cta {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .sub {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    /* No-photo fallback */
+    .no-photo body { justify-content: center; }
+    .no-photo .card { color: var(--label); padding: 48px 24px; }
+    .no-photo .cta  { background: var(--accent); }
+    .no-photo .sub  { color: var(--secondary); }
+  </style>
+
+  <!-- Branch.io SDK for deferred deep link on install -->
+  <script>
+    (function(b,r,a,n,c,h,_,s,d,k){
+      if(!b[n]){b[n]=function(){b[n]._q.push(arguments)};b[n]._q=[];
+      h=r.createElement(a);h.async=1;h.src=s;d=r.getElementsByTagName(a)[0];
+      d.parentNode.insertBefore(h,d)}
+    })(window,document,"script","branch","https://cdn.branch.io/branch-latest.min.js");
+
+    branch("init", "<%= ENV.fetch('BRANCH_KEY', '') %>", function(err, data) {});
+
+    function openApp() {
+      branch("link", {
+        data: <%= @branch_data.to_json.html_safe %>
+      }, function(err, link) {
+        if (link) window.location.href = link;
+      });
+    }
+  </script>
+</head>
+<body>
+  <%= yield %>
+</body>
+</html>

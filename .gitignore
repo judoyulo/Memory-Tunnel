@@ -1,0 +1,37 @@
+# Ruby / Rails
+api/vendor/bundle/
+api/.bundle/
+api/tmp/
+api/log/
+api/storage/
+api/public/assets/
+api/.byebug_history
+api/node_modules/
+
+# Secrets — never commit
+api/.env
+api/.env.*
+!api/.env.example
+
+# Bootsnap cache
+api/tmp/cache/bootsnap*/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Xcode / iOS build artifacts
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/DerivedData/
+ios/build/
+ios/Pods/
+ios/*.ipa
+ios/*.dSYM.zip
+ios/*.dSYM

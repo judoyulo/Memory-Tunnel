@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Start the Memory Tunnel dev server.
+# Run from the api/ directory: ./bin/dev
+set -e
+
+# Make sure postgres is running
+PG_CTL="/Library/PostgreSQL/9.5/bin/pg_ctl"
+PG_DATA="$HOME/pg-data"
+if ! "$PG_CTL" -D "$PG_DATA" status > /dev/null 2>&1; then
+  echo "Starting PostgreSQL..."
+  "$PG_CTL" -D "$PG_DATA" -l "$PG_DATA/server.log" start
+  sleep 1
+fi
+
+exec bundle exec rails server "$@"

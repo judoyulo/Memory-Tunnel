@@ -1,0 +1,12 @@
+<div class="photo">
+  <img src="<%= @preview_url %>" alt="Shared memory" />
+</div>
+
+<div class="card">
+  <p class="sender"><%= @sender.display_name %> shared a memory with you</p>
+  <h1 class="headline">Open it in Memory Tunnel</h1>
+  <a href="#" class="cta" onclick="openApp(); return false;">
+    Open Memory Tunnel
+  </a>
+  <p class="sub">Free app · No spam · Only the two of you</p>
+</div>
