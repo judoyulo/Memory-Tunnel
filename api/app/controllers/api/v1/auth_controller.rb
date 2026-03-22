@@ -18,7 +18,9 @@ module Api
         code = user.generate_otp!
         TwilioOtpJob.perform_later(phone: phone, code: code)
 
-        render json: { message: "OTP sent" }, status: :ok
+        response_body = { message: "OTP sent" }
+        response_body[:dev_code] = code if Rails.env.development?
+        render json: response_body, status: :ok
       rescue ActiveRecord::RecordInvalid => e
         render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
       end
