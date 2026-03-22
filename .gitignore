@@ -35,3 +35,4 @@ ios/Pods/
 ios/*.ipa
 ios/*.dSYM.zip
 ios/*.dSYM
+.gstack/
