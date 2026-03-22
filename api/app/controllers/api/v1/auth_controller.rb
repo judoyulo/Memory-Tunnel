@@ -59,6 +59,8 @@ module Api
           user: user_json(user),
           chapter: chapter ? chapter_json(chapter) : nil
         }, status: :ok
+      rescue ActiveRecord::RecordNotFound
+        render json: { error: "Phone number not found" }, status: :not_found
       end
 
       private
