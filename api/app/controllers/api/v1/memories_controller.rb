@@ -46,6 +46,13 @@ module Api
         render json: memory_json(memory), status: :created
       end
 
+      # GET /api/v1/chapters/:chapter_id/memories/:id/refresh_url
+      # Returns a fresh signed media URL. Call when local TTL exceeds 50 minutes.
+      def refresh_url
+        memory = @chapter.memories_visible_to(current_user).find(params[:id])
+        render json: { media_url: memory.signed_url }
+      end
+
       # DELETE /api/v1/chapters/:chapter_id/memories/:id
       def destroy
         memory = @chapter.memories.find(params[:id])

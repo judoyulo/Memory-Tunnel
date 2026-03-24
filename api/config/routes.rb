@@ -21,6 +21,8 @@ Rails.application.routes.draw do
         resources :memories, only: %i[index create destroy] do
           # Presigned URL for direct S3 upload
           post "presign", on: :collection
+          # Refresh a signed media URL before it expires (TTL 1hr; call at ~50min)
+          get  "refresh_url", on: :member
         end
         # Visibility tier
         patch "visibility"
