@@ -3,6 +3,16 @@ module Api
     class AuthController < ApplicationController
       skip_before_action :authenticate!
 
+      # Rate limiting — uses Rails.cache (memory_store in dev, null_store in test)
+      # send_otp: 5 requests / minute / IP  → prevents SMS bombing
+      rate_limit to: 5, within: 1.minute, only: :send_otp,
+                 with: -> { render json: { error: "Too many requests. Try again in a minute." }, status: :too_many_requests }
+
+      # verify_otp: 5 attempts / 10 minutes / phone → prevents brute-force
+      rate_limit to: 5, within: 10.minutes, only: :verify_otp,
+                 by: -> { params[:phone].to_s.strip },
+                 with: -> { render json: { error: "Too many attempts. Try again later." }, status: :too_many_requests }
+
       # POST /api/v1/auth/send_otp
       # Body: { phone: "+14155551234" }
       # Sends a 6-digit SMS OTP. Idempotent — safe to call again if code expires.
@@ -19,7 +29,7 @@ module Api
         TwilioOtpJob.perform_later(phone: phone, code: code)
 
         response_body = { message: "OTP sent" }
-        response_body[:dev_code] = code if Rails.env.development?
+        response_body[:dev_code] = code if Rails.env.local?
         render json: response_body, status: :ok
       rescue ActiveRecord::RecordInvalid => e
         render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity

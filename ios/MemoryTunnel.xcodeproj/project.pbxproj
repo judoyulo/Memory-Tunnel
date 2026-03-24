@@ -1,0 +1,557 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		068E7EE92FD1C1B4836985B1 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1527B86F2568D595484A547C /* UserNotifications.framework */; };
+		0B8251B3A089718406898747 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF139A166335B7CA58185AA /* TokenStore.swift */; };
+		15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9FA6F1F64C171D8F2E7EAC /* Models.swift */; };
+		2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */; };
+		33AC07DD2BE2A3F199EBB221 /* FaceDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */; };
+		36A151511982C76171C4D966 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F02D88001778856F574C23B4 /* SwiftUI.framework */; };
+		41BADDFDB18BA73C4FF4590D /* ChapterDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555ADCC5403C1E28DA61001A /* ChapterDetailView.swift */; };
+		522FE9149A8615FEF3617B3F /* Vision.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = E582EDFACC333CDF2C4F7EED /* Vision.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		551B5012E5C3650D779E8355 /* DailyCardContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE06847419A79BDE2DE826FB /* DailyCardContainerView.swift */; };
+		57D92DC80464380511418FFC /* UserNotifications.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 1527B86F2568D595484A547C /* UserNotifications.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		981B39713274D837F6675DE0 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E582EDFACC333CDF2C4F7EED /* Vision.framework */; };
+		9A1E05176709D3BEFCE506F4 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0112CA1A835CA0557BDC99B5 /* PushNotificationService.swift */; };
+		B1160195B57149BD1B4DD442 /* MemoryTunnelWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F292EE59F80953A9A84A89C6 /* MemoryTunnelWidget.swift */; };
+		B49A3B44AB2EF9BDE97761BE /* ChapterListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F4F13AA020559F5C8C9163 /* ChapterListView.swift */; };
+		B73786D849A19C52C1EA0154 /* SendFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84C03B23DB9D61F1A074F22 /* SendFlowView.swift */; };
+		D44F1A862209A22D7BE25237 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 518A2F34DAF8416CB916CFB3 /* WidgetKit.framework */; };
+		DE15476EEAAC184DCF21B5F4 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE574ADFE6930B00A68CA0D /* APIClient.swift */; };
+		F07AE0C42CA641AB3D22A001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77E3D57DF35B477A9FC67124 /* OnboardingView.swift */; };
+		F5AEB29055C274654432FE84 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBCB7F0577C7E7795737722A /* DesignTokens.swift */; };
+		F61ED938FFDB51632282CB35 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 690DD1E433D7B3C88548F7B9 /* ContentView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B6506BC4651A9B75667974D5 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				522FE9149A8615FEF3617B3F /* Vision.framework in Embed Frameworks */,
+				57D92DC80464380511418FFC /* UserNotifications.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0112CA1A835CA0557BDC99B5 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
+		1527B86F2568D595484A547C /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = UserNotifications.framework; sourceTree = "<group>"; };
+		39C1EF24188FA35CA2389EEC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3DE574ADFE6930B00A68CA0D /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		518A2F34DAF8416CB916CFB3 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = WidgetKit.framework; sourceTree = "<group>"; };
+		5229DB016C5411DB03A5428D /* MemoryTunnel.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MemoryTunnel.entitlements; sourceTree = "<group>"; };
+		52F4F13AA020559F5C8C9163 /* ChapterListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterListView.swift; sourceTree = "<group>"; };
+		555ADCC5403C1E28DA61001A /* ChapterDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterDetailView.swift; sourceTree = "<group>"; };
+		593C0FA5735F951AFA127EA8 /* MemoryTunnelWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MemoryTunnelWidget.entitlements; sourceTree = "<group>"; };
+		690DD1E433D7B3C88548F7B9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		77E3D57DF35B477A9FC67124 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceDetectionService.swift; sourceTree = "<group>"; };
+		84F9FDA034C090D31D89C48B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTunnelApp.swift; sourceTree = "<group>"; };
+		8FF139A166335B7CA58185AA /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
+		90AE4A4BA1640955C51BDCF9 /* MemoryTunnelWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = MemoryTunnelWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C84C03B23DB9D61F1A074F22 /* SendFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendFlowView.swift; sourceTree = "<group>"; };
+		DBCB7F0577C7E7795737722A /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		E582EDFACC333CDF2C4F7EED /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Vision.framework; sourceTree = "<group>"; };
+		E78CD8E3F994E55AD801203C /* MemoryTunnel.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MemoryTunnel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EE06847419A79BDE2DE826FB /* DailyCardContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyCardContainerView.swift; sourceTree = "<group>"; };
+		F02D88001778856F574C23B4 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftUI.framework; sourceTree = "<group>"; };
+		F292EE59F80953A9A84A89C6 /* MemoryTunnelWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTunnelWidget.swift; sourceTree = "<group>"; };
+		FB9FA6F1F64C171D8F2E7EAC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		164916B94CA04802D0171D98 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D44F1A862209A22D7BE25237 /* WidgetKit.framework in Frameworks */,
+				36A151511982C76171C4D966 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6D44305A52A578B47CFF71EA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				981B39713274D837F6675DE0 /* Vision.framework in Frameworks */,
+				068E7EE92FD1C1B4836985B1 /* UserNotifications.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1867A8E49E7CE6005138E1EE /* Send */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Send;
+			sourceTree = "<group>";
+		};
+		22EFE7B621B52E4C48AFB9B2 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		2687C85E6F307E507662CFFB /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FB9FA6F1F64C171D8F2E7EAC /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		28283F253B97D1DF8EF08CC0 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		31A2FB4EAE1F4CA130972DF4 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				77E3D57DF35B477A9FC67124 /* OnboardingView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		42D84D27E842B04788F595BC /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				DBCB7F0577C7E7795737722A /* DesignTokens.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		623CF59CAC031E7419CAC2F0 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		6552D22FABEDD67E295A6266 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		6EBE1A75DADBA930A85B6B1E /* App */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		7242F2CA7077784CC5E4632F /* MemoryTunnelWidget */ = {
+			isa = PBXGroup;
+			children = (
+				84F9FDA034C090D31D89C48B /* Info.plist */,
+				593C0FA5735F951AFA127EA8 /* MemoryTunnelWidget.entitlements */,
+				F292EE59F80953A9A84A89C6 /* MemoryTunnelWidget.swift */,
+			);
+			path = MemoryTunnelWidget;
+			sourceTree = "<group>";
+		};
+		7437D1F22E56655E4749BB86 /* Chapter */ = {
+			isa = PBXGroup;
+			children = (
+				555ADCC5403C1E28DA61001A /* ChapterDetailView.swift */,
+				52F4F13AA020559F5C8C9163 /* ChapterListView.swift */,
+			);
+			path = Chapter;
+			sourceTree = "<group>";
+		};
+		7A3AC9A363FD9630514F09DC /* DailyCard */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = DailyCard;
+			sourceTree = "<group>";
+		};
+		7D86DCFA9CEF395B7FE97469 = {
+			isa = PBXGroup;
+			children = (
+				B8FFB20F68893D18523533E6 /* MemoryTunnel */,
+				7242F2CA7077784CC5E4632F /* MemoryTunnelWidget */,
+				8761E7FC3470EE2CAD196590 /* Frameworks */,
+				C6CC249AE807CE73DABC1528 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		86C1858998DFA3BE7808893F /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				94C220BF24074FD70FA23034 /* Chapter */,
+				7A3AC9A363FD9630514F09DC /* DailyCard */,
+				22EFE7B621B52E4C48AFB9B2 /* Onboarding */,
+				1867A8E49E7CE6005138E1EE /* Send */,
+				A5C10EF3046E4B0204856264 /* Web */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		8761E7FC3470EE2CAD196590 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F02D88001778856F574C23B4 /* SwiftUI.framework */,
+				1527B86F2568D595484A547C /* UserNotifications.framework */,
+				E582EDFACC333CDF2C4F7EED /* Vision.framework */,
+				518A2F34DAF8416CB916CFB3 /* WidgetKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		94C220BF24074FD70FA23034 /* Chapter */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Chapter;
+			sourceTree = "<group>";
+		};
+		A5C10EF3046E4B0204856264 /* Web */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Web;
+			sourceTree = "<group>";
+		};
+		B8FFB20F68893D18523533E6 /* MemoryTunnel */ = {
+			isa = PBXGroup;
+			children = (
+				2687C85E6F307E507662CFFB /* Models */,
+				C0CC87D0AD5C944B936EA13B /* Networking */,
+				623CF59CAC031E7419CAC2F0 /* Resources */,
+				F676AE0E4DCDFD89CE2E0842 /* Services */,
+				FC39DBAB47F87EA4915C523E /* Sources */,
+				28283F253B97D1DF8EF08CC0 /* Tests */,
+				EE4BA1AC455D0A20236930DB /* Views */,
+				39C1EF24188FA35CA2389EEC /* Info.plist */,
+				5229DB016C5411DB03A5428D /* MemoryTunnel.entitlements */,
+				8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */,
+			);
+			path = MemoryTunnel;
+			sourceTree = "<group>";
+		};
+		C0CC87D0AD5C944B936EA13B /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				3DE574ADFE6930B00A68CA0D /* APIClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		C6CC249AE807CE73DABC1528 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E78CD8E3F994E55AD801203C /* MemoryTunnel.app */,
+				90AE4A4BA1640955C51BDCF9 /* MemoryTunnelWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CDC8D010C4059A8BD8996A89 /* DailyCard */ = {
+			isa = PBXGroup;
+			children = (
+				EE06847419A79BDE2DE826FB /* DailyCardContainerView.swift */,
+			);
+			path = DailyCard;
+			sourceTree = "<group>";
+		};
+		D84B35132ABDE2E7C946FA0F /* Services */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		DCD844C305E23613C684F23F /* SendFlow */ = {
+			isa = PBXGroup;
+			children = (
+				C84C03B23DB9D61F1A074F22 /* SendFlowView.swift */,
+			);
+			path = SendFlow;
+			sourceTree = "<group>";
+		};
+		EE4BA1AC455D0A20236930DB /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				7437D1F22E56655E4749BB86 /* Chapter */,
+				42D84D27E842B04788F595BC /* Components */,
+				CDC8D010C4059A8BD8996A89 /* DailyCard */,
+				31A2FB4EAE1F4CA130972DF4 /* Onboarding */,
+				DCD844C305E23613C684F23F /* SendFlow */,
+				690DD1E433D7B3C88548F7B9 /* ContentView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F676AE0E4DCDFD89CE2E0842 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */,
+				0112CA1A835CA0557BDC99B5 /* PushNotificationService.swift */,
+				8FF139A166335B7CA58185AA /* TokenStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		FC39DBAB47F87EA4915C523E /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				6EBE1A75DADBA930A85B6B1E /* App */,
+				6552D22FABEDD67E295A6266 /* Models */,
+				D84B35132ABDE2E7C946FA0F /* Services */,
+				86C1858998DFA3BE7808893F /* Views */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		111A2F5F2D5A3881A8DF721F /* MemoryTunnel */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 74AD48963D183359D0B70EF0 /* Build configuration list for PBXNativeTarget "MemoryTunnel" */;
+			buildPhases = (
+				A4DCFEABED7A17664D675E90 /* Sources */,
+				6D44305A52A578B47CFF71EA /* Frameworks */,
+				B6506BC4651A9B75667974D5 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MemoryTunnel;
+			packageProductDependencies = (
+			);
+			productName = MemoryTunnel;
+			productReference = E78CD8E3F994E55AD801203C /* MemoryTunnel.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B25DB8CE70331A09F6BFB2BE /* MemoryTunnelWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4E1AF51D6D05667123F9875 /* Build configuration list for PBXNativeTarget "MemoryTunnelWidget" */;
+			buildPhases = (
+				3C39B67CB3FB53A76229E5CC /* Sources */,
+				164916B94CA04802D0171D98 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MemoryTunnelWidget;
+			packageProductDependencies = (
+			);
+			productName = MemoryTunnelWidget;
+			productReference = 90AE4A4BA1640955C51BDCF9 /* MemoryTunnelWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		56BBD5E5C38580B5D6DC5CEA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					111A2F5F2D5A3881A8DF721F = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					B25DB8CE70331A09F6BFB2BE = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 1BFE5FFC2FE606BC346722C4 /* Build configuration list for PBXProject "MemoryTunnel" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 7D86DCFA9CEF395B7FE97469;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C6CC249AE807CE73DABC1528 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				111A2F5F2D5A3881A8DF721F /* MemoryTunnel */,
+				B25DB8CE70331A09F6BFB2BE /* MemoryTunnelWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3C39B67CB3FB53A76229E5CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1160195B57149BD1B4DD442 /* MemoryTunnelWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A4DCFEABED7A17664D675E90 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE15476EEAAC184DCF21B5F4 /* APIClient.swift in Sources */,
+				41BADDFDB18BA73C4FF4590D /* ChapterDetailView.swift in Sources */,
+				B49A3B44AB2EF9BDE97761BE /* ChapterListView.swift in Sources */,
+				F61ED938FFDB51632282CB35 /* ContentView.swift in Sources */,
+				551B5012E5C3650D779E8355 /* DailyCardContainerView.swift in Sources */,
+				F5AEB29055C274654432FE84 /* DesignTokens.swift in Sources */,
+				33AC07DD2BE2A3F199EBB221 /* FaceDetectionService.swift in Sources */,
+				2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */,
+				15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */,
+				F07AE0C42CA641AB3D22A001 /* OnboardingView.swift in Sources */,
+				9A1E05176709D3BEFCE506F4 /* PushNotificationService.swift in Sources */,
+				B73786D849A19C52C1EA0154 /* SendFlowView.swift in Sources */,
+				0B8251B3A089718406898747 /* TokenStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		56BC3E55A5D0A74690B5C798 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MemoryTunnelWidget/MemoryTunnelWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = MemoryTunnelWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app.widget;
+			};
+			name = Release;
+		};
+		8A53A130897E3AE5CA586318 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = MemoryTunnel/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				OTHER_SWIFT_FLAGS = "-DDEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app;
+			};
+			name = Debug;
+		};
+		8FC0B8FE497695ECC9A13BDE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MemoryTunnelWidget/MemoryTunnelWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = MemoryTunnelWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app.widget;
+			};
+			name = Debug;
+		};
+		AB0DF6B68ABB2521D6243BE6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		E1310F6596C0B85433B4D453 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		E24A8A50A7DC26CA78490732 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".\"",
+				);
+				INFOPLIST_FILE = MemoryTunnel/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1BFE5FFC2FE606BC346722C4 /* Build configuration list for PBXProject "MemoryTunnel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1310F6596C0B85433B4D453 /* Debug */,
+				AB0DF6B68ABB2521D6243BE6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		74AD48963D183359D0B70EF0 /* Build configuration list for PBXNativeTarget "MemoryTunnel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8A53A130897E3AE5CA586318 /* Debug */,
+				E24A8A50A7DC26CA78490732 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F4E1AF51D6D05667123F9875 /* Build configuration list for PBXNativeTarget "MemoryTunnelWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8FC0B8FE497695ECC9A13BDE /* Debug */,
+				56BC3E55A5D0A74690B5C798 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 56BBD5E5C38580B5D6DC5CEA /* Project object */;
+}

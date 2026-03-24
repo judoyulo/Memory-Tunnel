@@ -2,7 +2,7 @@ class Memory < ApplicationRecord
   belongs_to :chapter
   belongs_to :owner, class_name: "User"
 
-  enum :visibility, { this_item: "this_item", all: "all" }
+  enum :visibility, { this_item: "this_item", all: "all" }, scopes: false
 
   validates :chapter, :owner, presence: true
   validates :s3_key,     presence: true

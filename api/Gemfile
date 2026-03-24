@@ -25,7 +25,7 @@ gem "oj", "~> 3.16"
 gem "dotenv-rails"
 
 group :development, :test do
-  gem "debug", platforms: %i[mri windows]
+  gem "debug", platforms: %i[mri mswin]
   gem "rspec-rails", "~> 7.0"
   gem "factory_bot_rails"
   gem "faker"

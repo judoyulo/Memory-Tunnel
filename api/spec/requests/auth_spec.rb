@@ -64,5 +64,102 @@ RSpec.describe "Auth API", type: :request do
       expect(body["error"]).not_to include("users")
       expect(body["error"]).not_to include("Couldn't find")
     end
+
+    # invitation_token flow — user B accepts an invitation during OTP verification
+    context "with a valid invitation_token" do
+      let(:inviter)     { create(:user) }
+      let(:chapter)     { create(:chapter, member_a: inviter, invited_phone: "+14155550099") }
+      let(:memory)      { create(:memory, chapter: chapter, owner: inviter) }
+      let(:invitation)  { create(:invitation, chapter: chapter, invited_by: inviter, preview_memory: memory) }
+      let(:invitee_phone) { "+14155550099" }
+
+      before do
+        invitation # ensure it exists
+        post "/api/v1/auth/send_otp", params: { phone: invitee_phone }, as: :json
+        @dev_code = JSON.parse(response.body)["dev_code"]
+      end
+
+      it "returns a chapter in the response when invitation token is valid" do
+        post "/api/v1/auth/verify_otp",
+             params: { phone: invitee_phone, code: @dev_code, invitation_token: invitation.token },
+             as: :json
+
+        expect(response).to have_http_status(:ok)
+        body = JSON.parse(response.body)
+        expect(body["token"]).to be_present
+        expect(body["chapter"]).not_to be_nil
+        expect(body["chapter"]["id"]).to eq(chapter.id)
+        expect(body["chapter"]["status"]).to eq("active")
+      end
+
+      it "activates the chapter — member_b is set to the invitee" do
+        post "/api/v1/auth/verify_otp",
+             params: { phone: invitee_phone, code: @dev_code, invitation_token: invitation.token },
+             as: :json
+
+        chapter.reload
+        invitee = User.find_by!(phone: invitee_phone)
+        expect(chapter.member_b_id).to eq(invitee.id)
+        expect(chapter.status).to eq("active")
+      end
+
+      it "ignores an expired invitation token and returns nil chapter" do
+        invitation.update!(expires_at: 1.day.ago)
+
+        post "/api/v1/auth/verify_otp",
+             params: { phone: invitee_phone, code: @dev_code, invitation_token: invitation.token },
+             as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(JSON.parse(response.body)["chapter"]).to be_nil
+      end
+
+      it "ignores an unknown invitation token gracefully" do
+        post "/api/v1/auth/verify_otp",
+             params: { phone: invitee_phone, code: @dev_code, invitation_token: "bad-token-xyz" },
+             as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(JSON.parse(response.body)["chapter"]).to be_nil
+      end
+
+      it "rejects the inviter trying to accept their own invitation" do
+        # Get the inviter an OTP
+        inviter.generate_otp!
+        code = inviter.otp_code
+        # Directly set a known code for the inviter
+        raw = "555555"
+        inviter.update!(
+          otp_code: BCrypt::Password.create(raw),
+          otp_expires_at: 10.minutes.from_now
+        )
+
+        post "/api/v1/auth/verify_otp",
+             params: { phone: inviter.phone, code: raw, invitation_token: invitation.token },
+             as: :json
+
+        expect(response).to have_http_status(:ok)
+        body = JSON.parse(response.body)
+        # chapter is nil — you cannot accept your own invitation
+        expect(body["chapter"]).to be_nil
+        invitation.reload
+        expect(invitation.accepted_at).to be_nil
+      end
+    end
+  end
+
+  describe "rate limiting" do
+    # Rate limiting uses Rails.cache which is :null_store in test — so limits
+    # never actually trigger. These tests verify the middleware is wired up and
+    # the endpoints behave normally (i.e., aren't broken by the rate_limit call).
+    it "send_otp continues to return 200 under normal load" do
+      post "/api/v1/auth/send_otp", params: { phone: "+14155550050" }, as: :json
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "verify_otp continues to return errors normally under normal load" do
+      post "/api/v1/auth/verify_otp", params: { phone: "+19999999999", code: "000000" }, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
   end
 end
