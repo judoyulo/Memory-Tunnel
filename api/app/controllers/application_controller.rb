@@ -29,8 +29,8 @@ class ApplicationController < ActionController::API
   end
 
   # ── Error renderers ──────────────────────────────────────────────────────────
-  def not_found(e)
-    render json: { error: e.message }, status: :not_found
+  def not_found(_e)
+    render json: { error: "Not found" }, status: :not_found
   end
 
   def unprocessable(e)
