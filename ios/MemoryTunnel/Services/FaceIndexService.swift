@@ -168,7 +168,7 @@ final class FaceIndexService {
     ) -> (record: FaceRecord, distance: Float)? {
         var best: (record: FaceRecord, distance: Float)?
 
-        for record in records where record.partnerID != nil {
+        for record in records {
             guard let archived = try? NSKeyedUnarchiver.unarchivedObject(
                 ofClass: VNFeaturePrintObservation.self,
                 from: record.featurePrintData
