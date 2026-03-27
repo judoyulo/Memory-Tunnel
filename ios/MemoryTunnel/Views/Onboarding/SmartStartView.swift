@@ -44,6 +44,7 @@ final class SmartStartViewModel: ObservableObject {
     var onComplete: () -> Void = {}
 
     private var scanTask: Task<Void, Never>?
+    private var timeoutTask: Task<Void, Never>?
 
     // MARK: - Permission + Scan
 
@@ -51,18 +52,20 @@ final class SmartStartViewModel: ObservableObject {
         state = .scanning
         scanTimedOut = false
 
-        scanTask = Task {
-            // Timeout sentinel — after 10s set the flag, keep scanning
-            Task {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-                if !Task.isCancelled {
-                    scanTimedOut = true
-                }
+        // Timeout sentinel — stored so cancelScan() can cancel it too
+        timeoutTask = Task {
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            if !Task.isCancelled {
+                scanTimedOut = true
             }
+        }
 
+        scanTask = Task {
             let results = await PhotoLibraryScanner.shared.scanForFrequentFaces()
 
             if Task.isCancelled { return }
+
+            timeoutTask?.cancel()
 
             if results.isEmpty {
                 onComplete()
@@ -74,6 +77,7 @@ final class SmartStartViewModel: ObservableObject {
     }
 
     func cancelScan() {
+        timeoutTask?.cancel()
         scanTask?.cancel()
         onComplete()
     }
@@ -647,7 +651,6 @@ private struct SmartStartCaptionScreen: View {
 
             Spacer()
         }
-        .navigationBarBackButtonHidden(false)
     }
 }
 
