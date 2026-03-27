@@ -125,8 +125,8 @@ struct DailyCardView: View {
                         showSendFlow = true
                     } label: {
                         Text("Send a memory back")
-                            .font(.mtLabel)
-                            .foregroundStyle(.white)
+                            .font(.mtButton)
+                            .foregroundStyle(Color.mtBackground)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(Color.mtLabel)
