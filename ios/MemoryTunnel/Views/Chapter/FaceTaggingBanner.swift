@@ -22,82 +22,84 @@ struct FaceTaggingBanner: View {
     @State private var isConfirming = false
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
-            // Face crop thumbnail
-            Group {
-                if let jpeg = face.cropJPEG, let ui = UIImage(data: jpeg) {
-                    Image(uiImage: ui)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Color.mtSurface
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .foregroundStyle(Color.mtSecondary)
-                        )
-                }
-            }
-            .frame(width: 56, height: 56)
-            .clipShape(Circle())
-
-            // Question
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Who's in this photo?")
-                    .font(.mtLabel)
-                    .foregroundStyle(Color.mtLabel)
-                Text("Helps Memory Tunnel remember them next time.")
-                    .font(.mtCaption)
-                    .foregroundStyle(Color.mtSecondary)
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.md)
-
-        HStack(spacing: Spacing.sm) {
-            // Ghost: Skip
-            Button(action: onSkip) {
-                Text("Skip")
-                    .font(.mtButton)
-                    .foregroundStyle(Color.mtLabel)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.clear)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.button)
-                            .stroke(Color.mtLabel, lineWidth: 1.5)
-                    )
-            }
-
-            // Primary: confirm
-            Button {
-                guard !isConfirming else { return }
-                isConfirming = true
-                Task {
-                    await onConfirm()
-                    isConfirming = false
-                }
-            } label: {
-                ZStack {
-                    Text("Yes, that's \(partnerName)")
-                        .font(.mtButton)
-                        .foregroundStyle(Color.mtBackground)
-                        .opacity(isConfirming ? 0 : 1)
-                    if isConfirming {
-                        ProgressView()
-                            .tint(Color.mtBackground)
+        VStack(spacing: 0) {
+            HStack(spacing: Spacing.md) {
+                // Face crop thumbnail
+                Group {
+                    if let jpeg = face.cropJPEG, let ui = UIImage(data: jpeg) {
+                        Image(uiImage: ui)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Color.mtSurface
+                            .overlay(
+                                Image(systemName: "person.fill")
+                                    .foregroundStyle(Color.mtSecondary)
+                            )
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.mtLabel)
-                .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                .frame(width: 56, height: 56)
+                .clipShape(Circle())
+
+                // Question
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Who's in this photo?")
+                        .font(.mtLabel)
+                        .foregroundStyle(Color.mtLabel)
+                    Text("Helps Memory Tunnel remember them next time.")
+                        .font(.mtCaption)
+                        .foregroundStyle(Color.mtSecondary)
+                }
+
+                Spacer()
             }
-            .disabled(isConfirming)
+            .padding(.horizontal, Spacing.md)
+            .padding(.top, Spacing.md)
+
+            HStack(spacing: Spacing.sm) {
+                // Ghost: Skip
+                Button(action: onSkip) {
+                    Text("Skip")
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtLabel)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
+                        )
+                }
+
+                // Primary: confirm
+                Button {
+                    guard !isConfirming else { return }
+                    isConfirming = true
+                    Task {
+                        await onConfirm()
+                        isConfirming = false
+                    }
+                } label: {
+                    ZStack {
+                        Text("Yes, that's \(partnerName)")
+                            .font(.mtButton)
+                            .foregroundStyle(Color.mtBackground)
+                            .opacity(isConfirming ? 0 : 1)
+                        if isConfirming {
+                            ProgressView()
+                                .tint(Color.mtBackground)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.mtLabel)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                }
+                .disabled(isConfirming)
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.bottom, Spacing.md)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.bottom, Spacing.md)
         .background(Color.mtSurface)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card))
         .padding(.horizontal, Spacing.md)
