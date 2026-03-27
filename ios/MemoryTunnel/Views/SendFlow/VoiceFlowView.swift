@@ -98,11 +98,11 @@ struct VoiceFlowView: View {
                 case .preview:
                     PreviewStep(vm: vm)
                 case .caption:
-                    CaptionStep(vm: vm)
+                    VoiceCaptionStep(vm: vm)
                 case .sending:
-                    SendingStep()
+                    VoiceSendingStep()
                 case .sent:
-                    SentStep { dismiss() }
+                    VoiceSentStep { dismiss() }
                 case .error(let msg):
                     VoiceErrorStep(message: msg) { vm.step = .caption }
                 }
@@ -224,7 +224,7 @@ private struct PreviewStep: View {
 
 // MARK: - Step: Caption
 
-private struct CaptionStep: View {
+private struct VoiceCaptionStep: View {
     @ObservedObject var vm: VoiceFlowViewModel
     @FocusState private var focused: Bool
 
@@ -269,7 +269,7 @@ private struct CaptionStep: View {
 
 // MARK: - Step: Sending
 
-private struct SendingStep: View {
+private struct VoiceSendingStep: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
@@ -284,7 +284,7 @@ private struct SendingStep: View {
 
 // MARK: - Step: Sent ✓
 
-private struct SentStep: View {
+private struct VoiceSentStep: View {
     let dismiss: () -> Void
 
     var body: some View {

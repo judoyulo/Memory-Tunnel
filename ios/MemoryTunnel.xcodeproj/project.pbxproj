@@ -10,6 +10,14 @@
 		068E7EE92FD1C1B4836985B1 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1527B86F2568D595484A547C /* UserNotifications.framework */; };
 		0B8251B3A089718406898747 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF139A166335B7CA58185AA /* TokenStore.swift */; };
 		15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9FA6F1F64C171D8F2E7EAC /* Models.swift */; };
+		F120DA27455F45C1A4072056 /* BirthdayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13BA0DD82C7A46C9957CC4AB /* BirthdayService.swift */; };
+		174A6E70C50D4353965B2942 /* FaceIndexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF402597A5D9447AABFAF95D /* FaceIndexService.swift */; };
+		7EFD5E288B3045BBA77E9FCB /* VoiceMemoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF6475E592084A0B9F21B0E3 /* VoiceMemoryService.swift */; };
+		7A95466D8B22476688745B2C /* FaceTaggingBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E652EFA736FC409DA62F0FF5 /* FaceTaggingBanner.swift */; };
+		FDD9BF86DB8F451D9AB87D9E /* RecordButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3170BD63BF66463EA58727D1 /* RecordButton.swift */; };
+		4BF925D4485E4BC0AAABE220 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 010D13D8ECB54B78BC5D0327 /* WaveformView.swift */; };
+		9000F912D8C84841BCE8CC72 /* InviteFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFE201DCA26646BAA5D68E4B /* InviteFlowView.swift */; };
+		0D3B3F92AF6F47B198413127 /* VoiceFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB3B6BCE902447097EEB7CE /* VoiceFlowView.swift */; };
 		2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */; };
 		33AC07DD2BE2A3F199EBB221 /* FaceDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */; };
 		36A151511982C76171C4D966 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F02D88001778856F574C23B4 /* SwiftUI.framework */; };
@@ -53,6 +61,14 @@
 		690DD1E433D7B3C88548F7B9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		77E3D57DF35B477A9FC67124 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceDetectionService.swift; sourceTree = "<group>"; };
+		13BA0DD82C7A46C9957CC4AB /* BirthdayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayService.swift; sourceTree = "<group>"; };
+		BF402597A5D9447AABFAF95D /* FaceIndexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceIndexService.swift; sourceTree = "<group>"; };
+		EF6475E592084A0B9F21B0E3 /* VoiceMemoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMemoryService.swift; sourceTree = "<group>"; };
+		E652EFA736FC409DA62F0FF5 /* FaceTaggingBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceTaggingBanner.swift; sourceTree = "<group>"; };
+		3170BD63BF66463EA58727D1 /* RecordButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordButton.swift; sourceTree = "<group>"; };
+		010D13D8ECB54B78BC5D0327 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		AFE201DCA26646BAA5D68E4B /* InviteFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFlowView.swift; sourceTree = "<group>"; };
+		5FB3B6BCE902447097EEB7CE /* VoiceFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceFlowView.swift; sourceTree = "<group>"; };
 		84F9FDA034C090D31D89C48B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTunnelApp.swift; sourceTree = "<group>"; };
 		8FF139A166335B7CA58185AA /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
@@ -130,6 +146,8 @@
 			isa = PBXGroup;
 			children = (
 				DBCB7F0577C7E7795737722A /* DesignTokens.swift */,
+				3170BD63BF66463EA58727D1 /* RecordButton.swift */,
+				010D13D8ECB54B78BC5D0327 /* WaveformView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -170,6 +188,7 @@
 			children = (
 				555ADCC5403C1E28DA61001A /* ChapterDetailView.swift */,
 				52F4F13AA020559F5C8C9163 /* ChapterListView.swift */,
+				E652EFA736FC409DA62F0FF5 /* FaceTaggingBanner.swift */,
 			);
 			path = Chapter;
 			sourceTree = "<group>";
@@ -280,7 +299,9 @@
 		DCD844C305E23613C684F23F /* SendFlow */ = {
 			isa = PBXGroup;
 			children = (
+				AFE201DCA26646BAA5D68E4B /* InviteFlowView.swift */,
 				C84C03B23DB9D61F1A074F22 /* SendFlowView.swift */,
+				5FB3B6BCE902447097EEB7CE /* VoiceFlowView.swift */,
 			);
 			path = SendFlow;
 			sourceTree = "<group>";
@@ -301,9 +322,12 @@
 		F676AE0E4DCDFD89CE2E0842 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				13BA0DD82C7A46C9957CC4AB /* BirthdayService.swift */,
 				7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */,
+				BF402597A5D9447AABFAF95D /* FaceIndexService.swift */,
 				0112CA1A835CA0557BDC99B5 /* PushNotificationService.swift */,
 				8FF139A166335B7CA58185AA /* TokenStore.swift */,
+				EF6475E592084A0B9F21B0E3 /* VoiceMemoryService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -412,18 +436,26 @@
 			buildActionMask = 2147483647;
 			files = (
 				DE15476EEAAC184DCF21B5F4 /* APIClient.swift in Sources */,
+				F120DA27455F45C1A4072056 /* BirthdayService.swift in Sources */,
 				41BADDFDB18BA73C4FF4590D /* ChapterDetailView.swift in Sources */,
 				B49A3B44AB2EF9BDE97761BE /* ChapterListView.swift in Sources */,
 				F61ED938FFDB51632282CB35 /* ContentView.swift in Sources */,
 				551B5012E5C3650D779E8355 /* DailyCardContainerView.swift in Sources */,
 				F5AEB29055C274654432FE84 /* DesignTokens.swift in Sources */,
 				33AC07DD2BE2A3F199EBB221 /* FaceDetectionService.swift in Sources */,
+				174A6E70C50D4353965B2942 /* FaceIndexService.swift in Sources */,
+				7A95466D8B22476688745B2C /* FaceTaggingBanner.swift in Sources */,
+				9000F912D8C84841BCE8CC72 /* InviteFlowView.swift in Sources */,
 				2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */,
 				15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */,
 				F07AE0C42CA641AB3D22A001 /* OnboardingView.swift in Sources */,
 				9A1E05176709D3BEFCE506F4 /* PushNotificationService.swift in Sources */,
+				FDD9BF86DB8F451D9AB87D9E /* RecordButton.swift in Sources */,
 				B73786D849A19C52C1EA0154 /* SendFlowView.swift in Sources */,
 				0B8251B3A089718406898747 /* TokenStore.swift in Sources */,
+				0D3B3F92AF6F47B198413127 /* VoiceFlowView.swift in Sources */,
+				7EFD5E288B3045BBA77E9FCB /* VoiceMemoryService.swift in Sources */,
+				4BF925D4485E4BC0AAABE220 /* WaveformView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

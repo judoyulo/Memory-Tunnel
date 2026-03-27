@@ -69,7 +69,9 @@ final class FaceIndexService {
 
         for box in boxes {
             let crop        = cropFace(from: cgImage, boundingBox: box)
-            let observation = crop.flatMap { await generateFeaturePrint(for: $0) }
+            let observation: VNFeaturePrintObservation?
+            if let crop { observation = await generateFeaturePrint(for: crop) }
+            else        { observation = nil }
 
             let match = observation.flatMap { findBestMatch($0, in: allRecords) }
 
