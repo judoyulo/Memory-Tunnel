@@ -126,20 +126,41 @@ final class BirthdayService {
         birthday: BirthdayComponents,
         relativeTo today: DateComponents
     ) -> Bool {
-        guard let todayMonth    = today.month,
-              let todayDay      = today.day
+        guard let todayMonth = today.month,
+              let todayDay   = today.day
         else { return false }
 
-        // Use a simple ordinal: month*100 + day. Comparable within a year.
-        let todayOrdinal    = todayMonth * 100 + todayDay
-        let birthdayOrdinal = birthday.month * 100 + birthday.day
+        let cal = Calendar.current
+        // Build today's date and the birthday's date in the current year.
+        // Use the current year for the birthday; if the birthday has already passed
+        // this year, check the same date next year.
+        let year = cal.component(.year, from: Date())
 
-        // Distance forward in the year. Handle Dec→Jan wrap by adding 1200 (12 months * 100).
-        let distance = birthdayOrdinal >= todayOrdinal
-            ? birthdayOrdinal - todayOrdinal
-            : (1200 + birthdayOrdinal) - todayOrdinal
+        var bdComps        = DateComponents()
+        bdComps.year       = year
+        bdComps.month      = birthday.month
+        bdComps.day        = birthday.day
 
-        return distance <= 7
+        var todayComps     = DateComponents()
+        todayComps.year    = year
+        todayComps.month   = todayMonth
+        todayComps.day     = todayDay
+
+        guard let bdDate    = cal.date(from: bdComps),
+              let todayDate = cal.date(from: todayComps)
+        else { return false }
+
+        // Forward distance in days — use next year's birthday if it has already passed.
+        var delta = cal.dateComponents([.day], from: todayDate, to: bdDate).day ?? Int.max
+        if delta < 0 {
+            // Birthday already passed this year — look at next year's occurrence.
+            bdComps.year = year + 1
+            if let nextYearBD = cal.date(from: bdComps) {
+                delta = cal.dateComponents([.day], from: todayDate, to: nextYearBD).day ?? Int.max
+            }
+        }
+
+        return delta >= 0 && delta <= 7
     }
 }
 
