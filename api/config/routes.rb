@@ -34,8 +34,9 @@ Rails.application.routes.draw do
       end
 
       # Daily card queue
-      get  "daily_card",       to: "daily_card#show"
-      post "daily_card/open",  to: "daily_card#open"
+      get  "daily_card",                    to: "daily_card#show"
+      post "daily_card/open",              to: "daily_card#open"
+      post "daily_card/birthday_signal",   to: "daily_card#birthday_signal"
     end
   end
 end

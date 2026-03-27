@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_21_224128) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_26_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -162,12 +162,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_21_224128) do
     t.string "caption"
     t.uuid "chapter_id", null: false
     t.datetime "created_at", null: false
+    t.string "media_type", default: "photo", null: false
     t.uuid "owner_id", null: false
     t.string "s3_key", null: false
     t.datetime "taken_at"
     t.datetime "updated_at", null: false
     t.string "visibility", default: "this_item", null: false
     t.index ["chapter_id", "created_at"], name: "index_memories_on_chapter_id_and_created_at"
+    t.index ["chapter_id", "media_type"], name: "index_memories_on_chapter_id_and_media_type"
     t.index ["chapter_id", "owner_id", "visibility"], name: "index_memories_on_chapter_id_and_owner_id_and_visibility"
     t.index ["chapter_id"], name: "index_memories_on_chapter_id"
     t.index ["owner_id"], name: "index_memories_on_owner_id"

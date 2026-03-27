@@ -11,6 +11,13 @@ final class ChapterListViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             chapters = try await APIClient.shared.chapters()
+            let active = chapters.filter { $0.status == "active" }
+            if !active.isEmpty {
+                // Request Contacts access after first active chapter (DESIGN.md permission timing).
+                // No-ops if already authorized or denied.
+                await BirthdayService.shared.requestAccessIfNeeded(for: active)
+                await BirthdayService.shared.checkAndSignal(chapters: active)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

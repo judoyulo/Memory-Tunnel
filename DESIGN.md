@@ -167,6 +167,88 @@ The receiver's first experience — no install required.
 - Font: system-ui (matches SF Pro feel on iOS)
 - Desktop: same layout + QR code to App Store
 
+## User Journey
+
+### Activation Sequence (Install → First Exchange)
+
+The sequence is linear and deliberate. Each step has one purpose and one action.
+
+```
+Install
+  └─ OTP Onboarding: Phone → Code → Name (new users only)
+       └─ Permissions: Push notifications requested after Name step
+            └─ Empty home state: Chapters tab shows "Start your first chapter"
+                 └─ InviteFlow: Name → Pick Photo → Caption → Send & invite → Share link
+                      └─ Partner installs via Branch.io link, OTP with invitation token
+                           └─ Chapter activates: both users see each other's chapter
+                                └─ Daily card cycle (see below)
+```
+
+**Empty home is not a dead end.** The "Invite someone" CTA on the Chapters empty state
+IS the activation — it opens InviteFlowView and walks the user through creating their
+first chapter with a photo in hand.
+
+### Daily Card Engagement Loop
+
+```
+Daily card queued (server-side) → User opens card → "Send a memory back" CTA
+  → SendFlowView: pick photo → caption → send (amber ✓ confirmation)
+  → "Come back tomorrow." message
+  → Partner's daily card queued
+  → [loop]
+```
+
+Decay trigger (>90 days inactive): server queues a decay card; red dot appears on
+chapter tile before user opens app.
+
+Birthday trigger: server queues a birthday card when partner's birthday matches
+(requires Contacts permission; see below).
+
+### Permission Request Timing
+
+| Permission | When to request | Rationale |
+|---|---|---|
+| Push notifications | After Name step in onboarding | User has committed (gave name); push makes the loop work |
+| Photos | On first "Choose a photo" tap (implicit via PhotosPicker) | Request at the moment of need; never cold-ask |
+| Contacts | After first chapter activates | Birthday detection only makes sense once there's someone to detect for |
+| Camera | Not used in v1 | — |
+
+**Principle:** request the minimum set needed for the next immediate step.
+Never batch permissions at launch. Never explain a permission before the user
+has context for why it matters.
+
+### Face Indexing UX
+
+After a memory is successfully uploaded, face detection and embedding run on-device
+in the background (non-blocking). If unrecognized faces are found, a prompt appears
+at the bottom of ChapterDetailView the next time the user visits that chapter.
+
+**Prompt pattern — one face at a time:**
+- Face crop (circular, 56pt) centered in a warm-surface card
+- Headline: `"Who's in this photo?"` (22pt Regular)
+- Primary button: `"Yes, that's [Partner name]"` (Primary variant — `#1C1C1E` fill)
+- Ghost button: `"Skip"` (Ghost variant — transparent, `#1C1C1E` border)
+
+**Rules:**
+- Never modal or full-screen — always a dismissable banner at the bottom
+- One face per prompt, never a grid of unknowns
+- Skipped faces are not re-prompted on the same session; they reappear after 7 days
+- No face data, embeddings, or crops ever leave the device
+- Once tagged, future photos with that person are auto-recognized silently (no prompt)
+
+### Voice Clips (v1.1 — not yet implemented)
+
+Voice clips follow the same send flow as photos with adapted UI:
+
+- Replace PhotosPicker with a hold-to-record button (microphone icon, 72pt touch target)
+- Waveform visualization: thin vertical bars, animated in real-time, `#C8956C` accent color
+- Playback: tap-to-play inline in the chapter grid (waveform scrubber, no fullscreen)
+- Duration limit: 60 seconds (progress ring around the record button)
+- Caption: optional, same field as photo flow
+
+In the chapter grid, voice clips render as a distinct tile: waveform thumbnail on
+`#EDE0CC` surface, duration badge in bottom-right corner.
+
 ## Decisions Log
 
 | Date | Decision | Rationale |

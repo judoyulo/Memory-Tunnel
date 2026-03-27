@@ -45,7 +45,8 @@ final class ChapterDetailViewModel: ObservableObject {
 struct ChapterDetailView: View {
     let chapter: Chapter
     @StateObject private var vm: ChapterDetailViewModel
-    @State private var showSendFlow = false
+    @State private var showSendFlow  = false
+    @State private var showVoiceFlow = false
     @State private var showVisibilityPicker = false
     @EnvironmentObject var appState: AppState
 
@@ -76,7 +77,7 @@ struct ChapterDetailView: View {
                         .foregroundStyle(Color.mtSecondary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
-                    Button("Send a memory") { showSendFlow = true }
+                    Button("Send a photo") { showSendFlow = true }
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -104,7 +105,8 @@ struct ChapterDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Send a memory") { showSendFlow = true }
+                    Button("Send a photo")        { showSendFlow  = true }
+                    Button("Record a voice clip") { showVoiceFlow = true }
                     Divider()
                     Button("Show all my memories") { Task { await vm.updateVisibility("all") } }
                     Button("Only show sent memories") { Task { await vm.updateVisibility("this_item") } }
@@ -116,24 +118,72 @@ struct ChapterDetailView: View {
         }
         .sheet(isPresented: $showSendFlow) {
             SendFlowView(chapterID: chapter.id)
+                .onDisappear { Task { await vm.load() } }
         }
+        .sheet(isPresented: $showVoiceFlow) {
+            VoiceFlowView(chapterID: chapter.id)
+                .onDisappear { Task { await vm.load() } }
+        }
+        .faceTaggingOverlay(for: chapter)
         .task { await vm.load() }
     }
 }
 
 // MARK: - Memory Thumbnail
 
+/// Renders a photo tile or voice clip tile depending on memory.mediaType.
 struct MemoryThumbnailView: View {
     let memory: Memory
 
     var body: some View {
-        AsyncImage(url: memory.mediaURL) { image in
-            image
-                .resizable()
-                .scaledToFill()
-        } placeholder: {
-            Color.mtSurface
+        if memory.isVoice {
+            VoiceClipTileView(memory: memory)
+        } else {
+            AsyncImage(url: memory.mediaURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Color.mtSurface
+            }
+            .clipped()
         }
-        .clipped()
+    }
+}
+
+// MARK: - Voice Clip Tile
+
+struct VoiceClipTileView: View {
+    let memory: Memory
+    @State private var showPlayer = false
+
+    var body: some View {
+        ZStack {
+            Color.mtSurface
+
+            VStack(spacing: Spacing.xs) {
+                WaveformView(isAnimating: false)
+                    .frame(height: 36)
+                    .padding(.horizontal, Spacing.sm)
+
+                Image(systemName: "waveform")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.mtAccent)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { showPlayer = true }
+        .sheet(isPresented: $showPlayer) {
+            VStack(spacing: Spacing.xl) {
+                Spacer()
+                Text(memory.caption ?? "Voice clip")
+                    .font(.mtBody)
+                    .foregroundStyle(Color.mtSecondary)
+                    .multilineTextAlignment(.center)
+                VoicePlayerView(url: memory.mediaURL)
+                    .padding(.horizontal, Spacing.xl)
+                Spacer()
+            }
+            .presentationDetents([.medium])
+            .background(Color.mtBackground)
+        }
     }
 }

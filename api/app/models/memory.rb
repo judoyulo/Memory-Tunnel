@@ -2,11 +2,13 @@ class Memory < ApplicationRecord
   belongs_to :chapter
   belongs_to :owner, class_name: "User"
 
-  enum :visibility, { this_item: "this_item", all: "all" }, scopes: false
+  enum :visibility,  { this_item: "this_item", all: "all" },    scopes: false
+  enum :media_type,  { photo: "photo", voice: "voice" },        scopes: false
 
   validates :chapter, :owner, presence: true
-  validates :s3_key,     presence: true
-  validates :visibility, presence: true
+  validates :s3_key,          presence: true
+  validates :visibility,      presence: true
+  validates :media_type,      presence: true
 
   # ── Signed URL ───────────────────────────────────────────────────────────────
   # Returns a short-lived signed URL for the client to render the photo.
@@ -29,7 +31,8 @@ class Memory < ApplicationRecord
   # Generates a presigned PUT URL so the iOS client can upload directly to S3
   # without routing the binary through Rails. Returns { upload_url:, s3_key: }.
   def self.presign_upload(chapter_id:, owner_id:, content_type: "image/jpeg")
-    key = "memories/#{chapter_id}/#{SecureRandom.uuid}.jpg"
+    ext = content_type.include?("audio") ? ".m4a" : ".jpg"
+    key = "memories/#{chapter_id}/#{SecureRandom.uuid}#{ext}"
     s3  = Aws::S3::Client.new(region: ENV.fetch("AWS_REGION", "us-east-1"))
     signer = Aws::S3::Presigner.new(client: s3)
 

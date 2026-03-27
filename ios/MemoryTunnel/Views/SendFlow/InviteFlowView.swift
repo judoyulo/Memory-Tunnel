@@ -25,9 +25,12 @@ final class InviteFlowViewModel: ObservableObject {
     }
 
     func loadSelectedImage() async {
-        guard let item = selectedItem,
-              let data  = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else { return }
+        guard let item = selectedItem else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else {
+            step = .error("Couldn't load that photo. Please try another.")
+            return
+        }
 
         selectedImage = image
         step = .addCaption
@@ -37,15 +40,23 @@ final class InviteFlowViewModel: ObservableObject {
 
     func send() async {
         guard let image = selectedImage else { return }
+        // Prevent double-tap: only proceed from caption step
+        guard case .addCaption = step else { return }
         step = .sending
 
         do {
-            // 1. Create chapter
-            let chapter = try await APIClient.shared.createChapter(
-                name: personName.trimmingCharacters(in: .whitespaces).isEmpty ? nil
-                      : personName.trimmingCharacters(in: .whitespaces)
-            )
-            createdChapterID = chapter.id
+            // 1. Create chapter (idempotent — reuse if already created on a prior attempt)
+            let chapterID: String
+            if let existingID = createdChapterID {
+                chapterID = existingID
+            } else {
+                let chapter = try await APIClient.shared.createChapter(
+                    name: personName.trimmingCharacters(in: .whitespaces).isEmpty ? nil
+                          : personName.trimmingCharacters(in: .whitespaces)
+                )
+                createdChapterID = chapter.id
+                chapterID = chapter.id
+            }
 
             // 2. Compress image
             guard let data = image.jpegData(compressionQuality: 0.85) else {
@@ -53,14 +64,14 @@ final class InviteFlowViewModel: ObservableObject {
             }
 
             // 3. Get presigned S3 URL
-            let presign = try await APIClient.shared.presign(chapterID: chapter.id)
+            let presign = try await APIClient.shared.presign(chapterID: chapterID)
 
             // 4. Upload directly to S3
             try await APIClient.shared.uploadToS3(data: data, presign: presign)
 
             // 5. Create memory record
             let memory = try await APIClient.shared.createMemory(
-                chapterID:  chapter.id,
+                chapterID:  chapterID,
                 s3Key:      presign.s3Key,
                 caption:    caption.isEmpty ? nil : caption,
                 takenAt:    nil,
@@ -69,11 +80,14 @@ final class InviteFlowViewModel: ObservableObject {
 
             // 6. Create invitation link (non-fatal — chapter + memory already exist)
             createdInvitation = try? await APIClient.shared.createInvitation(
-                chapterID: chapter.id,
+                chapterID: chapterID,
                 memoryID:  memory.id
             )
 
             step = .done
+
+            // Fire-and-forget: index faces in the uploaded photo for the tagging prompt queue.
+            Task { await FaceIndexService.shared.processFaces(in: image) }
         } catch {
             step = .error(error.localizedDescription)
         }

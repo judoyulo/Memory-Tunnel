@@ -109,8 +109,9 @@ actor APIClient {
                        body: ["content_type": contentType])
     }
 
-    func createMemory(chapterID: String, s3Key: String, caption: String?, takenAt: Date?, visibility: String) async throws -> Memory {
-        var body: [String: String] = ["s3_key": s3Key, "visibility": visibility]
+    func createMemory(chapterID: String, s3Key: String, caption: String?, takenAt: Date?,
+                      visibility: String, mediaType: String = "photo") async throws -> Memory {
+        var body: [String: String] = ["s3_key": s3Key, "visibility": visibility, "media_type": mediaType]
         if let c = caption { body["caption"] = c }
         if let t = takenAt {
             let iso = ISO8601DateFormatter()
@@ -152,6 +153,12 @@ actor APIClient {
 
     func markDailyCardOpened() async throws {
         try await post("/api/v1/daily_card/open", body: [:])
+    }
+
+    /// Signal that a chapter partner has an upcoming birthday (detected on-device via Contacts).
+    /// The server queues a birthday daily card. No date data is included in the request.
+    func signalBirthday(chapterID: String) async throws {
+        try await post("/api/v1/daily_card/birthday_signal", body: ["chapter_id": chapterID])
     }
 
     // MARK: - S3 Direct Upload

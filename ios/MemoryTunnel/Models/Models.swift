@@ -54,16 +54,20 @@ struct Memory: Codable, Identifiable {
     let chapterID: String
     let ownerID: String
     var mediaURL: URL
+    var mediaType: String        // "photo" | "voice"
     var caption: String?
     var takenAt: Date?
     var visibility: String
     let createdAt: Date
+
+    var isVoice: Bool { mediaType == "voice" }
 
     enum CodingKeys: String, CodingKey {
         case id
         case chapterID  = "chapter_id"
         case ownerID    = "owner_id"
         case mediaURL   = "media_url"
+        case mediaType  = "media_type"
         case caption
         case takenAt    = "taken_at"
         case visibility

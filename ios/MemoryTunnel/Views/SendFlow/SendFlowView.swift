@@ -65,6 +65,9 @@ final class SendFlowViewModel: ObservableObject {
             )
 
             step = .sent
+
+            // Fire-and-forget: index faces in the uploaded photo for the tagging prompt queue.
+            Task { await FaceIndexService.shared.processFaces(in: image) }
         } catch {
             step = .error(error.localizedDescription)
         }

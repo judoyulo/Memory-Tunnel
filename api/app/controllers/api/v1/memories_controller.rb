@@ -34,7 +34,8 @@ module Api
           s3_key:     params.require(:s3_key),
           caption:    params[:caption],
           taken_at:   params[:taken_at],
-          visibility: params.fetch(:visibility, "this_item")
+          visibility: params.fetch(:visibility, "this_item"),
+          media_type: params.fetch(:media_type, "photo")
         )
 
         @chapter.touch_last_memory!
@@ -68,7 +69,9 @@ module Api
       private
 
       def set_chapter
-        @chapter = Chapter.active.for_user(current_user).find(params[:chapter_id])
+        @chapter = Chapter.where(status: %w[pending active])
+                          .for_user(current_user)
+                          .find(params[:chapter_id])
       end
 
       def memory_json(memory)
@@ -77,6 +80,7 @@ module Api
           chapter_id:  memory.chapter_id,
           owner_id:    memory.owner_id,
           media_url:   memory.signed_url,
+          media_type:  memory.media_type,
           caption:     memory.caption,
           taken_at:    memory.taken_at,
           visibility:  memory.visibility,

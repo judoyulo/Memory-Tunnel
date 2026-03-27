@@ -51,7 +51,7 @@ module Api
       private
 
       def set_chapter
-        @chapter = Chapter.active
+        @chapter = Chapter.where(status: %w[pending active])
                           .for_user(current_user)
                           .find(params[:id])
       end
