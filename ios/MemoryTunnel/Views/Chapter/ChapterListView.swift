@@ -152,7 +152,7 @@ struct ChapterListEmptyView: View {
                 .lineSpacing(4)
             Button(action: onInvite) {
                 Text("Invite someone")
-                    .font(.mtLabel)
+                    .font(.mtButton)
                     .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)

@@ -77,7 +77,7 @@ struct ChapterDetailView: View {
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
                     Button("Send a memory") { showSendFlow = true }
-                        .font(.mtLabel)
+                        .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
