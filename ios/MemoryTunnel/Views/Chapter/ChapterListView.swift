@@ -118,8 +118,8 @@ struct ChapterTileView: View {
 
                 if chapter.status == "pending" {
                     Text("Invite not sent yet")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(Color.mtSecondary)
+                        .font(.mtCaption)
+                        .foregroundStyle(Color.mtTertiary)
                 } else if let tag = chapter.lifeChapterTag {
                     Text(tag)
                         .font(.mtCaption)
