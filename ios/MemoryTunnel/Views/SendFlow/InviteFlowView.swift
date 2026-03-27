@@ -156,8 +156,8 @@ private struct InviteNameStep: View {
                 vm.proceedToPhoto()
             } label: {
                 Text("Choose a photo")
-                    .font(.mtLabel)
-                    .foregroundStyle(.white)
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.mtLabel)
@@ -194,8 +194,8 @@ private struct InvitePhotoStep: View {
 
             PhotosPicker(selection: $vm.selectedItem, matching: .images) {
                 Label("Open Photos", systemImage: "photo.on.rectangle")
-                    .font(.mtLabel)
-                    .foregroundStyle(.white)
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.mtLabel)
@@ -245,8 +245,8 @@ private struct InviteCaptionStep: View {
                     Task { await vm.send() }
                 } label: {
                     Text("Send & invite")
-                        .font(.mtLabel)
-                        .foregroundStyle(.white)
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Color.mtLabel)
@@ -311,8 +311,8 @@ private struct InviteDoneStep: View {
                     showShareSheet = true
                 } label: {
                     Label("Share invite link", systemImage: "square.and.arrow.up")
-                        .font(.mtLabel)
-                        .foregroundStyle(.white)
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Color.mtAccent)
