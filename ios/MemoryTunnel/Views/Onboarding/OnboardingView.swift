@@ -220,10 +220,10 @@ struct PrimaryButton: View {
         Button(action: action) {
             ZStack {
                 Text(title)
-                    .font(.mtLabel)
-                    .foregroundStyle(.white)
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtBackground)
                     .opacity(isLoading ? 0 : 1)
-                if isLoading { ProgressView().tint(.white) }
+                if isLoading { ProgressView().tint(Color.mtBackground) }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
