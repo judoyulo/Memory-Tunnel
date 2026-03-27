@@ -53,10 +53,15 @@ struct ChapterListView: View {
                     ScrollView {
                         LazyVStack(spacing: Spacing.sm) {
                             ForEach(vm.chapters) { chapter in
-                                NavigationLink(value: chapter) {
+                                if chapter.status == "pending" {
+                                    // Pending chapters have no partner yet — not navigable
                                     ChapterTileView(chapter: chapter)
+                                } else {
+                                    NavigationLink(value: chapter) {
+                                        ChapterTileView(chapter: chapter)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                         .padding(Spacing.md)
@@ -92,26 +97,30 @@ struct ChapterListView: View {
 
 struct ChapterTileView: View {
     let chapter: Chapter
+    @State private var showShareSheet = false
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            // Avatar pill — 24pt, top-left
-            if let name = chapter.partner?.displayName {
-                ZStack {
-                    Capsule()
-                        .fill(Color.mtSurface)
-                        .frame(width: 44, height: 44)
-                    Text(name.prefix(1).uppercased())
-                        .font(.mtLabel)
-                        .foregroundStyle(Color.mtLabel)
-                }
+            // Avatar pill — 44pt circle, initial letter
+            ZStack {
+                Capsule()
+                    .fill(Color.mtSurface)
+                    .frame(width: 44, height: 44)
+                Text(avatarLetter)
+                    .font(.mtLabel)
+                    .foregroundStyle(Color.mtLabel)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(chapter.partner?.displayName ?? chapter.name ?? "Pending")
                     .font(.mtLabel)
                     .foregroundStyle(Color.mtLabel)
-                if let tag = chapter.lifeChapterTag {
+
+                if chapter.status == "pending" {
+                    Text("Invite not sent yet")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(Color.mtSecondary)
+                } else if let tag = chapter.lifeChapterTag {
                     Text(tag)
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
@@ -120,8 +129,18 @@ struct ChapterTileView: View {
 
             Spacer()
 
-            // Decay indicator (accent dot — emotional peak)
-            if isDecayed {
+            if chapter.status == "pending" {
+                // Share CTA — emotional nudge to complete the chapter
+                Button {
+                    showShareSheet = true
+                } label: {
+                    Text("Share")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.mtLabel)
+                }
+                .accessibilityLabel("Share invite link for \(chapter.name ?? "this chapter")")
+            } else if isDecayed {
+                // Decay indicator (accent dot — emotional peak)
                 Circle()
                     .fill(Color.mtAccent)
                     .frame(width: 8, height: 8)
@@ -130,6 +149,21 @@ struct ChapterTileView: View {
         .padding(Spacing.md)
         .background(Color.mtSurface)
         .clipShape(RoundedRectangle(cornerRadius: Radius.micro))
+        .sheet(isPresented: $showShareSheet) {
+            // Pending chapters may not have an invitation yet.
+            // If we have no URL, show a placeholder message.
+            Text("Invite link unavailable.\nTry opening the chapter to generate one.")
+                .font(.mtBody)
+                .foregroundStyle(Color.mtSecondary)
+                .multilineTextAlignment(.center)
+                .padding(Spacing.xl)
+                .presentationDetents([.medium])
+        }
+    }
+
+    private var avatarLetter: String {
+        let name = chapter.partner?.displayName ?? chapter.name ?? "?"
+        return String(name.prefix(1).uppercased())
     }
 
     private var isDecayed: Bool {

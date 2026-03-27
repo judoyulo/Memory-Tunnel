@@ -16,6 +16,8 @@
 		7A95466D8B22476688745B2C /* FaceTaggingBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E652EFA736FC409DA62F0FF5 /* FaceTaggingBanner.swift */; };
 		FDD9BF86DB8F451D9AB87D9E /* RecordButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3170BD63BF66463EA58727D1 /* RecordButton.swift */; };
 		4BF925D4485E4BC0AAABE220 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 010D13D8ECB54B78BC5D0327 /* WaveformView.swift */; };
+		AA11BB22CC33DD44EE55FF03 /* PhotoLibraryScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF01 /* PhotoLibraryScanner.swift */; };
+		AA11BB22CC33DD44EE55FF04 /* SmartStartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF02 /* SmartStartView.swift */; };
 		9000F912D8C84841BCE8CC72 /* InviteFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFE201DCA26646BAA5D68E4B /* InviteFlowView.swift */; };
 		0D3B3F92AF6F47B198413127 /* VoiceFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB3B6BCE902447097EEB7CE /* VoiceFlowView.swift */; };
 		2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */; };
@@ -81,6 +83,8 @@
 		F02D88001778856F574C23B4 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		F292EE59F80953A9A84A89C6 /* MemoryTunnelWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTunnelWidget.swift; sourceTree = "<group>"; };
 		FB9FA6F1F64C171D8F2E7EAC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF01 /* PhotoLibraryScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryScanner.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF02 /* SmartStartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartStartView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +142,7 @@
 			isa = PBXGroup;
 			children = (
 				77E3D57DF35B477A9FC67124 /* OnboardingView.swift */,
+				AA11BB22CC33DD44EE55FF02 /* SmartStartView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -325,6 +330,7 @@
 				13BA0DD82C7A46C9957CC4AB /* BirthdayService.swift */,
 				7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */,
 				BF402597A5D9447AABFAF95D /* FaceIndexService.swift */,
+				AA11BB22CC33DD44EE55FF01 /* PhotoLibraryScanner.swift */,
 				0112CA1A835CA0557BDC99B5 /* PushNotificationService.swift */,
 				8FF139A166335B7CA58185AA /* TokenStore.swift */,
 				EF6475E592084A0B9F21B0E3 /* VoiceMemoryService.swift */,
@@ -449,9 +455,11 @@
 				2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */,
 				15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */,
 				F07AE0C42CA641AB3D22A001 /* OnboardingView.swift in Sources */,
+				AA11BB22CC33DD44EE55FF03 /* PhotoLibraryScanner.swift in Sources */,
 				9A1E05176709D3BEFCE506F4 /* PushNotificationService.swift in Sources */,
 				FDD9BF86DB8F451D9AB87D9E /* RecordButton.swift in Sources */,
 				B73786D849A19C52C1EA0154 /* SendFlowView.swift in Sources */,
+				AA11BB22CC33DD44EE55FF04 /* SmartStartView.swift in Sources */,
 				0B8251B3A089718406898747 /* TokenStore.swift in Sources */,
 				0D3B3F92AF6F47B198413127 /* VoiceFlowView.swift in Sources */,
 				7EFD5E288B3045BBA77E9FCB /* VoiceMemoryService.swift in Sources */,

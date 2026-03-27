@@ -4,7 +4,7 @@ import SwiftUI
 
 @MainActor
 final class OnboardingViewModel: ObservableObject {
-    enum Step { case phone, code, name }
+    enum Step { case phone, code, name, smartStart }
 
     @Published var step: Step = .phone
     @Published var phone: String = ""
@@ -54,10 +54,14 @@ final class OnboardingViewModel: ObservableObject {
         do {
             _ = try await APIClient.shared.updateMe(displayName: displayName.isEmpty ? nil : displayName)
             await PushNotificationService.shared.requestAuthorization()
-            isComplete = true
+            step = .smartStart
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func completeOnboarding() {
+        isComplete = true
     }
 
     private var normalizedPhone: String {
@@ -77,38 +81,49 @@ struct OnboardingView: View {
         ZStack {
             Color.mtBackground.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                Spacer()
+            if case .smartStart = vm.step {
+                // Full-screen smart start — no logo, no outer padding
+                SmartStartView { vm.completeOnboarding() }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal:   .move(edge: .leading).combined(with: .opacity)
+                    ))
+            } else {
+                VStack(spacing: 0) {
+                    Spacer()
 
-                // Logo / wordmark
-                VStack(spacing: Spacing.sm) {
-                    Text("Memory Tunnel")
-                        .font(.mtDisplay)
-                        .foregroundStyle(Color.mtLabel)
-                    Text("For the people who matter most.")
-                        .font(.mtBody)
-                        .foregroundStyle(Color.mtSecondary)
-                }
-                .padding(.bottom, Spacing.xxl)
-
-                // Steps
-                Group {
-                    switch vm.step {
-                    case .phone: PhoneStep(vm: vm)
-                    case .code:  CodeStep(vm: vm)
-                    case .name:  NameStep(vm: vm)
+                    // Logo / wordmark
+                    VStack(spacing: Spacing.sm) {
+                        Text("Memory Tunnel")
+                            .font(.mtDisplay)
+                            .foregroundStyle(Color.mtLabel)
+                        Text("For the people who matter most.")
+                            .font(.mtBody)
+                            .foregroundStyle(Color.mtSecondary)
                     }
-                }
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal:   .move(edge: .leading).combined(with: .opacity)
-                ))
-                .animation(.mtSlide, value: vm.step)
+                    .padding(.bottom, Spacing.xxl)
 
-                Spacer()
+                    // Steps
+                    Group {
+                        switch vm.step {
+                        case .phone: PhoneStep(vm: vm)
+                        case .code:  CodeStep(vm: vm)
+                        case .name:  NameStep(vm: vm)
+                        case .smartStart: EmptyView()
+                        }
+                    }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal:   .move(edge: .leading).combined(with: .opacity)
+                    ))
+                    .animation(.mtSlide, value: vm.step)
+
+                    Spacer()
+                }
+                .padding(Spacing.xl)
             }
-            .padding(Spacing.xl)
         }
+        .animation(.mtSlide, value: vm.step)
         .onChange(of: vm.isComplete) { _, complete in
             if complete { Task { await appState.loadCurrentUser() } }
         }

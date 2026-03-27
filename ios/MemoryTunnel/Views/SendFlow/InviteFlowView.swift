@@ -9,7 +9,11 @@ final class InviteFlowViewModel: ObservableObject {
     enum Step { case name, pickPhoto, addCaption, sending, done, error(String) }
 
     @Published var step: Step = .name
-    @Published var personName: String = ""
+    @Published var personName: String
+
+    init(initialName: String? = nil) {
+        self.personName = initialName ?? ""
+    }
     @Published var selectedItem: PhotosPickerItem?
     @Published var selectedImage: UIImage?
     @Published var detectedFaces: [CGRect] = []
@@ -97,8 +101,12 @@ final class InviteFlowViewModel: ObservableObject {
 // MARK: - View
 
 struct InviteFlowView: View {
-    @StateObject private var vm = InviteFlowViewModel()
+    @StateObject private var vm: InviteFlowViewModel
     @Environment(\.dismiss) private var dismiss
+
+    init(initialName: String? = nil) {
+        _vm = StateObject(wrappedValue: InviteFlowViewModel(initialName: initialName))
+    }
 
     var body: some View {
         NavigationStack {
