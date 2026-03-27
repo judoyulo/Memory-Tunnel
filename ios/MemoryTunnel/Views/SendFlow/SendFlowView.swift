@@ -129,8 +129,8 @@ struct PhotoPickerStep: View {
 
             PhotosPicker(selection: $vm.selectedItem, matching: .images) {
                 Label("Open Photos", systemImage: "photo.on.rectangle")
-                    .font(.mtLabel)
-                    .foregroundStyle(.white)
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.mtLabel)
@@ -194,8 +194,8 @@ struct CaptionStep: View {
                     Task { await vm.send() }
                 } label: {
                     Text("Send")
-                        .font(.mtLabel)
-                        .foregroundStyle(.white)
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Color.mtLabel)
@@ -285,8 +285,8 @@ struct SentStep: View {
                     showShareSheet = true
                 } label: {
                     Label("Share invite link", systemImage: "square.and.arrow.up")
-                        .font(.mtLabel)
-                        .foregroundStyle(.white)
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(Color.mtAccent)
@@ -325,7 +325,7 @@ struct ErrorStep: View {
                 .multilineTextAlignment(.center)
             Button("Try again", action: retry)
                 .font(.mtLabel)
-                .foregroundStyle(Color.mtAccent)
+                .foregroundStyle(Color.mtSecondary)
             Spacer()
         }
         .padding(Spacing.xl)
