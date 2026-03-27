@@ -35,6 +35,13 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>API_BASE_URL</key>
+	<string>http://localhost:3001</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

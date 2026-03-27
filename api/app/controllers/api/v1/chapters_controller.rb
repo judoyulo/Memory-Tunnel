@@ -5,8 +5,29 @@ module Api
 
       # GET /api/v1/chapters
       def index
-        chapters = Chapter.active.for_user(current_user).includes(:member_a, :member_b)
+        chapters = Chapter.where(status: %w[pending active])
+                          .for_user(current_user)
+                          .includes(:member_a, :member_b)
+                          .order(updated_at: :desc)
         render json: chapters.map { |c| chapter_json(c) }
+      end
+
+      # POST /api/v1/chapters
+      # Body: { name: "Mom" }  (optional)
+      # Creates a new pending chapter for the current user.
+      def create
+        chapter = Chapter.new(
+          member_a:      current_user,
+          status:        :pending,
+          name:          params[:name]&.strip.presence,
+          invited_phone: nil
+        )
+
+        if chapter.save
+          render json: chapter_json(chapter), status: :created
+        else
+          render json: { error: chapter.errors.full_messages }, status: :unprocessable_entity
+        end
       end
 
       # GET /api/v1/chapters/:id

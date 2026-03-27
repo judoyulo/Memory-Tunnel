@@ -12,6 +12,7 @@ final class OnboardingViewModel: ObservableObject {
     @Published var displayName: String = ""
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isComplete = false
 
     // Set by Branch.io deferred deep link if user came via invitation
     var invitationToken: String?
@@ -53,6 +54,7 @@ final class OnboardingViewModel: ObservableObject {
         do {
             _ = try await APIClient.shared.updateMe(displayName: displayName.isEmpty ? nil : displayName)
             await PushNotificationService.shared.requestAuthorization()
+            isComplete = true
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -69,6 +71,7 @@ final class OnboardingViewModel: ObservableObject {
 
 struct OnboardingView: View {
     @StateObject private var vm = OnboardingViewModel()
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
         ZStack {
@@ -105,6 +108,9 @@ struct OnboardingView: View {
                 Spacer()
             }
             .padding(Spacing.xl)
+        }
+        .onChange(of: vm.isComplete) { _, complete in
+            if complete { Task { await appState.loadCurrentUser() } }
         }
     }
 }
@@ -221,7 +227,7 @@ struct PrimaryButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(Color.mtAccent)
+            .background(Color.mtLabel)
             .clipShape(RoundedRectangle(cornerRadius: Radius.button))
         }
         .disabled(isLoading)

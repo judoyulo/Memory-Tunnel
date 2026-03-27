@@ -10,8 +10,7 @@ class Chapter < ApplicationRecord
   validates :member_a, presence: true
   validates :status, presence: true
 
-  # pending state requires invited_phone; active state requires member_b
-  validates :invited_phone, presence: true, if: -> { pending? && member_b.nil? }
+  # active state requires member_b; pending chapters may use link-based invites (no phone required)
   validates :member_b, presence: true, if: :active?
 
   # ── Scopes ───────────────────────────────────────────────────────────────────

@@ -19,7 +19,7 @@ struct ContentView: View {
                 .tabItem { Label("Chapters", systemImage: "person.2.fill") }
                 .tag(Tab.chapters)
         }
-        .tint(.mtAccent)
+        .tint(Color.mtLabel)
         .onChange(of: router.pendingChapterID) { _, chapterID in
             if chapterID != nil { selectedTab = .chapters }
         }

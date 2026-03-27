@@ -60,7 +60,7 @@ enum Radius {
 
 extension Font {
     // Display — hero headings (Daily Card sender name, Chapter title)
-    static let mtDisplay = Font.system(size: 26, weight: .bold, design: .default)
+    static let mtDisplay = Font.system(size: 28, weight: .medium, design: .default)
 
     // Title — screen-level headings
     static let mtTitle   = Font.system(size: 20, weight: .semibold, design: .default)

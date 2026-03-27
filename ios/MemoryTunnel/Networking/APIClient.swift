@@ -84,6 +84,12 @@ actor APIClient {
         try await get("/api/v1/chapters")
     }
 
+    func createChapter(name: String?) async throws -> Chapter {
+        var body: [String: String] = [:]
+        if let n = name { body["name"] = n }
+        return try await post("/api/v1/chapters", body: body)
+    }
+
     func chapter(id: String) async throws -> Chapter {
         try await get("/api/v1/chapters/\(id)")
     }

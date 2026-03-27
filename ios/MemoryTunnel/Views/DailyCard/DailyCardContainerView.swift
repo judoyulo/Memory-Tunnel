@@ -34,6 +34,17 @@ struct DailyCardContainerView: View {
 
             if vm.isLoading {
                 ProgressView()
+            } else if let err = vm.errorMessage {
+                VStack(spacing: Spacing.md) {
+                    Text("Something went wrong")
+                        .font(.mtTitle)
+                        .foregroundStyle(Color.mtLabel)
+                    Text(err)
+                        .font(.mtCaption)
+                        .foregroundStyle(Color.mtSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(Spacing.xl)
             } else if let card = vm.card {
                 DailyCardView(card: card)
                     .transition(.opacity.animation(.mtFade))
@@ -118,7 +129,7 @@ struct DailyCardView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.mtAccent)
+                            .background(Color.mtLabel)
                             .clipShape(RoundedRectangle(cornerRadius: Radius.button))
                     }
                     .padding(.top, Spacing.xs)
@@ -140,6 +151,7 @@ struct DailyCardView: View {
         default:         return ""
         }
     }
+
 }
 
 // MARK: - Empty State
@@ -148,10 +160,11 @@ struct DailyCardEmptyView: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
-            Text("🌿")
-                .font(.system(size: 56))
+            Image(systemName: "leaf.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.mtAccent)
             Text("All caught up")
-                .font(.mtTitle)
+                .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(Color.mtLabel)
             Text("Come back tomorrow.\nYour next memory is waiting.")
                 .font(.mtBody)

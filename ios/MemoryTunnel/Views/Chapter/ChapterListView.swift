@@ -20,6 +20,7 @@ final class ChapterListViewModel: ObservableObject {
 struct ChapterListView: View {
     @StateObject private var vm = ChapterListViewModel()
     @EnvironmentObject var router: NotificationRouter
+    @State private var showInviteFlow = false
 
     var body: some View {
         NavigationStack {
@@ -28,8 +29,19 @@ struct ChapterListView: View {
 
                 if vm.isLoading && vm.chapters.isEmpty {
                     ProgressView()
+                } else if let err = vm.errorMessage, vm.chapters.isEmpty {
+                    VStack(spacing: Spacing.md) {
+                        Text("Couldn't load chapters")
+                            .font(.mtTitle)
+                            .foregroundStyle(Color.mtLabel)
+                        Text(err)
+                            .font(.mtCaption)
+                            .foregroundStyle(Color.mtSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(Spacing.xl)
                 } else if vm.chapters.isEmpty {
-                    ChapterListEmptyView()
+                    ChapterListEmptyView(onInvite: { showInviteFlow = true })
                 } else {
                     ScrollView {
                         LazyVStack(spacing: Spacing.sm) {
@@ -46,8 +58,22 @@ struct ChapterListView: View {
             }
             .navigationTitle("Chapters")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showInviteFlow = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .foregroundStyle(Color.mtLabel)
+                    }
+                }
+            }
             .navigationDestination(for: Chapter.self) { chapter in
                 ChapterDetailView(chapter: chapter)
+            }
+            .sheet(isPresented: $showInviteFlow) {
+                InviteFlowView()
+                    .onDisappear { Task { await vm.load() } }
             }
             .task { await vm.load() }
             .refreshable { await vm.load() }
@@ -75,7 +101,7 @@ struct ChapterTileView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(chapter.partner?.displayName ?? "Someone")
+                Text(chapter.partner?.displayName ?? chapter.name ?? "Pending")
                     .font(.mtLabel)
                     .foregroundStyle(Color.mtLabel)
                 if let tag = chapter.lifeChapterTag {
@@ -108,19 +134,32 @@ struct ChapterTileView: View {
 // MARK: - Empty State
 
 struct ChapterListEmptyView: View {
+    let onInvite: () -> Void
+
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
-            Text("💌")
-                .font(.system(size: 56))
-            Text("No chapters yet")
-                .font(.mtTitle)
+            Image(systemName: "envelope.heart.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.mtAccent)
+            Text("Start your first chapter")
+                .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(Color.mtLabel)
-            Text("Send a memory to start\na chapter with someone.")
+            Text("Send a first memory to someone\nyou want to stay close to.")
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
+            Button(action: onInvite) {
+                Text("Invite someone")
+                    .font(.mtLabel)
+                    .foregroundStyle(Color.mtBackground)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.mtLabel)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+            }
+            .padding(.horizontal, Spacing.xl)
             Spacer()
             Spacer()
         }

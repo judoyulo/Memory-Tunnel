@@ -19,7 +19,7 @@ struct User: Codable, Identifiable {
 
 // MARK: - Chapter
 
-struct Chapter: Codable, Identifiable {
+struct Chapter: Codable, Identifiable, Hashable {
     let id: String
     var status: String
     var name: String?
@@ -35,7 +35,7 @@ struct Chapter: Codable, Identifiable {
     }
 }
 
-struct PartnerStub: Codable {
+struct PartnerStub: Codable, Hashable {
     let id: String?
     let displayName: String?
     let avatarURL: URL?

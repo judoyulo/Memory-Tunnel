@@ -16,7 +16,7 @@ Rails.application.routes.draw do
       patch "me", to: "me#update" # PATCH → update display_name / push_token
 
       # Chapters
-      resources :chapters, only: %i[index show] do
+      resources :chapters, only: %i[index show create] do
         # Memories within a chapter
         resources :memories, only: %i[index create destroy] do
           # Presigned URL for direct S3 upload

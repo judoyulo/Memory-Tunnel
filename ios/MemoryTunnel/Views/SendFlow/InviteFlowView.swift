@@ -4,23 +4,25 @@ import PhotosUI
 // MARK: - ViewModel
 
 @MainActor
-final class SendFlowViewModel: ObservableObject {
+final class InviteFlowViewModel: ObservableObject {
 
-    enum Step { case pickPhoto, addCaption, sending, sent, error(String) }
+    enum Step { case name, pickPhoto, addCaption, sending, done, error(String) }
 
-    @Published var step: Step = .pickPhoto
+    @Published var step: Step = .name
+    @Published var personName: String = ""
     @Published var selectedItem: PhotosPickerItem?
     @Published var selectedImage: UIImage?
     @Published var detectedFaces: [CGRect] = []
     @Published var caption: String = ""
-    @Published var visibility: String = "this_item"   // default: explicitly shared
 
-    let chapterID: String
-    var createdInvitation: Invitation?
-
-    init(chapterID: String) { self.chapterID = chapterID }
+    private(set) var createdInvitation: Invitation?
+    private var createdChapterID: String?
 
     // MARK: - Actions
+
+    func proceedToPhoto() {
+        step = .pickPhoto
+    }
 
     func loadSelectedImage() async {
         guard let item = selectedItem,
@@ -30,7 +32,6 @@ final class SendFlowViewModel: ObservableObject {
         selectedImage = image
         step = .addCaption
 
-        // On-device face detection (async, non-blocking)
         detectedFaces = await FaceDetectionService.detectFaces(in: image)
     }
 
@@ -39,32 +40,40 @@ final class SendFlowViewModel: ObservableObject {
         step = .sending
 
         do {
+            // 1. Create chapter
+            let chapter = try await APIClient.shared.createChapter(
+                name: personName.trimmingCharacters(in: .whitespaces).isEmpty ? nil
+                      : personName.trimmingCharacters(in: .whitespaces)
+            )
+            createdChapterID = chapter.id
+
+            // 2. Compress image
             guard let data = image.jpegData(compressionQuality: 0.85) else {
                 throw APIError.httpError(0, "Image compression failed")
             }
 
-            // 1. Get presigned S3 URL
-            let presign = try await APIClient.shared.presign(chapterID: chapterID)
+            // 3. Get presigned S3 URL
+            let presign = try await APIClient.shared.presign(chapterID: chapter.id)
 
-            // 2. Upload directly to S3 (no server traffic)
+            // 4. Upload directly to S3
             try await APIClient.shared.uploadToS3(data: data, presign: presign)
 
-            // 3. Create the Memory record
+            // 5. Create memory record
             let memory = try await APIClient.shared.createMemory(
-                chapterID:  chapterID,
+                chapterID:  chapter.id,
                 s3Key:      presign.s3Key,
                 caption:    caption.isEmpty ? nil : caption,
                 takenAt:    nil,
-                visibility: visibility
+                visibility: "this_item"
             )
 
-            // 4. Create invitation (generates share URL for Branch.io)
-            createdInvitation = try? await APIClient.shared.createInvitation(
-                chapterID: chapterID,
+            // 6. Create invitation link
+            createdInvitation = try await APIClient.shared.createInvitation(
+                chapterID: chapter.id,
                 memoryID:  memory.id
             )
 
-            step = .sent
+            step = .done
         } catch {
             step = .error(error.localizedDescription)
         }
@@ -73,15 +82,9 @@ final class SendFlowViewModel: ObservableObject {
 
 // MARK: - View
 
-struct SendFlowView: View {
-    let chapterID: String
-    @StateObject private var vm: SendFlowViewModel
+struct InviteFlowView: View {
+    @StateObject private var vm = InviteFlowViewModel()
     @Environment(\.dismiss) private var dismiss
-
-    init(chapterID: String) {
-        self.chapterID = chapterID
-        _vm = StateObject(wrappedValue: SendFlowViewModel(chapterID: chapterID))
-    }
 
     var body: some View {
         NavigationStack {
@@ -89,22 +92,24 @@ struct SendFlowView: View {
                 Color.mtBackground.ignoresSafeArea()
 
                 switch vm.step {
+                case .name:
+                    InviteNameStep(vm: vm)
                 case .pickPhoto:
-                    PhotoPickerStep(vm: vm)
+                    InvitePhotoStep(vm: vm)
                 case .addCaption:
-                    CaptionStep(vm: vm)
+                    InviteCaptionStep(vm: vm)
                 case .sending:
-                    SendingStep()
-                case .sent:
-                    SentStep(vm: vm, dismiss: { dismiss() })
+                    InviteSendingStep()
+                case .done:
+                    InviteDoneStep(vm: vm, dismiss: { dismiss() })
                 case .error(let msg):
-                    ErrorStep(message: msg, retry: { vm.step = .addCaption })
+                    InviteErrorStep(message: msg) { vm.step = .addCaption }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    if case .sent = vm.step { EmptyView() }
+                    if case .done = vm.step { EmptyView() }
                     else {
                         Button("Cancel") { dismiss() }
                             .foregroundStyle(Color.mtSecondary)
@@ -115,17 +120,77 @@ struct SendFlowView: View {
     }
 }
 
-// MARK: - Step: Pick Photo
+// MARK: - Step: Name
 
-struct PhotoPickerStep: View {
-    @ObservedObject var vm: SendFlowViewModel
+private struct InviteNameStep: View {
+    @ObservedObject var vm: InviteFlowViewModel
+    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(spacing: Spacing.xl) {
             Spacer()
-            Text("Choose a photo")
-                .font(.mtTitle)
-                .foregroundStyle(Color.mtLabel)
+
+            VStack(spacing: Spacing.md) {
+                Text("Who do you want\nto stay close to?")
+                    .font(.mtDisplay)
+                    .foregroundStyle(Color.mtLabel)
+                    .multilineTextAlignment(.center)
+
+                Text("Their name helps you remember\nwhy this chapter matters.")
+                    .font(.mtBody)
+                    .foregroundStyle(Color.mtSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+
+            TextField("Their name", text: $vm.personName)
+                .font(.mtBody)
+                .padding(Spacing.md)
+                .background(Color.mtSurface)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+                .focused($focused)
+                .onAppear { focused = true }
+                .onSubmit { vm.proceedToPhoto() }
+
+            Button {
+                vm.proceedToPhoto()
+            } label: {
+                Text("Choose a photo")
+                    .font(.mtLabel)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.mtLabel)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+            }
+
+            Spacer()
+            Spacer()
+        }
+        .padding(Spacing.xl)
+    }
+}
+
+// MARK: - Step: Pick Photo
+
+private struct InvitePhotoStep: View {
+    @ObservedObject var vm: InviteFlowViewModel
+
+    var body: some View {
+        VStack(spacing: Spacing.xl) {
+            Spacer()
+
+            VStack(spacing: Spacing.md) {
+                Text("Send them a first memory")
+                    .font(.mtDisplay)
+                    .foregroundStyle(Color.mtLabel)
+                    .multilineTextAlignment(.center)
+
+                Text("A photo that makes you think of them.")
+                    .font(.mtBody)
+                    .foregroundStyle(Color.mtSecondary)
+                    .multilineTextAlignment(.center)
+            }
 
             PhotosPicker(selection: $vm.selectedItem, matching: .images) {
                 Label("Open Photos", systemImage: "photo.on.rectangle")
@@ -136,24 +201,25 @@ struct PhotoPickerStep: View {
                     .background(Color.mtLabel)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.button))
             }
-            .padding(.horizontal, Spacing.xl)
             .onChange(of: vm.selectedItem) { _, _ in
                 Task { await vm.loadSelectedImage() }
             }
+
+            Spacer()
             Spacer()
         }
+        .padding(Spacing.xl)
     }
 }
 
-// MARK: - Step: Add Caption
+// MARK: - Step: Caption
 
-struct CaptionStep: View {
-    @ObservedObject var vm: SendFlowViewModel
+private struct InviteCaptionStep: View {
+    @ObservedObject var vm: InviteFlowViewModel
     @FocusState private var captionFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
-            // Preview
             if let image = vm.selectedImage {
                 Image(uiImage: image)
                     .resizable()
@@ -164,7 +230,6 @@ struct CaptionStep: View {
                     .overlay(FaceOverlayView(faces: vm.detectedFaces))
             }
 
-            // Caption input
             VStack(alignment: .leading, spacing: Spacing.md) {
                 TextField("Add a caption… (optional)", text: $vm.caption, axis: .vertical)
                     .font(.mtBody)
@@ -175,25 +240,11 @@ struct CaptionStep: View {
                     .background(Color.mtSurface)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card))
 
-                // Visibility toggle
-                HStack {
-                    Text("Visible to")
-                        .font(.mtCaption)
-                        .foregroundStyle(Color.mtSecondary)
-                    Spacer()
-                    Picker("Visibility", selection: $vm.visibility) {
-                        Text("This memory only").tag("this_item")
-                        Text("All my memories").tag("all")
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 220)
-                }
-
                 Button {
                     captionFocused = false
                     Task { await vm.send() }
                 } label: {
-                    Text("Send")
+                    Text("Send & invite")
                         .font(.mtLabel)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -209,39 +260,14 @@ struct CaptionStep: View {
     }
 }
 
-// MARK: - Face Overlay
-
-/// Draws highlight boxes around detected faces.
-/// Coordinate flip: Vision uses bottom-left origin; SwiftUI uses top-left.
-struct FaceOverlayView: View {
-    let faces: [CGRect]
-
-    var body: some View {
-        GeometryReader { geo in
-            ForEach(Array(faces.enumerated()), id: \.offset) { _, face in
-                let flipped = CGRect(
-                    x:      face.minX * geo.size.width,
-                    y:      (1 - face.maxY) * geo.size.height,
-                    width:  face.width  * geo.size.width,
-                    height: face.height * geo.size.height
-                )
-                Rectangle()
-                    .stroke(Color.white.opacity(0.6), lineWidth: 1)
-                    .frame(width: flipped.width, height: flipped.height)
-                    .position(x: flipped.midX, y: flipped.midY)
-            }
-        }
-    }
-}
-
 // MARK: - Step: Sending
 
-struct SendingStep: View {
+private struct InviteSendingStep: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
             ProgressView()
-            Text("Sending…")
+            Text("Creating your chapter…")
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
@@ -249,10 +275,10 @@ struct SendingStep: View {
     }
 }
 
-// MARK: - Step: Sent ✓
+// MARK: - Step: Done ✓
 
-struct SentStep: View {
-    let vm: SendFlowViewModel
+private struct InviteDoneStep: View {
+    let vm: InviteFlowViewModel
     let dismiss: () -> Void
     @State private var showShareSheet = false
 
@@ -260,7 +286,7 @@ struct SentStep: View {
         VStack(spacing: Spacing.xl) {
             Spacer()
 
-            // Accent checkmark — emotional peak
+            // Accent checkmark — emotional peak (✓ sent)
             ZStack {
                 Circle()
                     .fill(Color.mtAccent.opacity(0.12))
@@ -270,11 +296,11 @@ struct SentStep: View {
                     .foregroundStyle(Color.mtAccent)
             }
 
-            Text("Sent")
+            Text("Memory sent")
                 .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
 
-            Text("Tap the link below to invite them\nif they're not on Memory Tunnel yet.")
+            Text("Share the link so they can\njoin your chapter.")
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -309,7 +335,7 @@ struct SentStep: View {
 
 // MARK: - Step: Error
 
-struct ErrorStep: View {
+private struct InviteErrorStep: View {
     let message: String
     let retry: () -> Void
 
@@ -325,19 +351,9 @@ struct ErrorStep: View {
                 .multilineTextAlignment(.center)
             Button("Try again", action: retry)
                 .font(.mtLabel)
-                .foregroundStyle(Color.mtAccent)
+                .foregroundStyle(Color.mtSecondary)
             Spacer()
         }
         .padding(Spacing.xl)
     }
-}
-
-// MARK: - ShareSheet (UIActivityViewController wrapper)
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }

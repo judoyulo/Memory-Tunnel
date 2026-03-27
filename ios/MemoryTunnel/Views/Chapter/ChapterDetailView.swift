@@ -54,17 +54,47 @@ struct ChapterDetailView: View {
         _vm = StateObject(wrappedValue: ChapterDetailViewModel(chapterID: chapter.id))
     }
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
         ZStack {
             Color.mtBackground.ignoresSafeArea()
 
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 2) {
-                    ForEach(vm.memories) { memory in
-                        MemoryThumbnailView(memory: memory)
-                            .aspectRatio(1, contentMode: .fit)
+            if vm.isLoading && vm.memories.isEmpty {
+                ProgressView()
+            } else if vm.memories.isEmpty {
+                VStack(spacing: Spacing.lg) {
+                    Spacer()
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 48))
+                        .foregroundStyle(Color.mtAccent)
+                    Text("No memories yet")
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(Color.mtLabel)
+                    Text("Send the first memory\nto start this chapter.")
+                        .font(.mtBody)
+                        .foregroundStyle(Color.mtSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                    Button("Send a memory") { showSendFlow = true }
+                        .font(.mtLabel)
+                        .foregroundStyle(Color.mtBackground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.mtLabel)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                        .padding(.horizontal, Spacing.xl)
+                    Spacer()
+                    Spacer()
+                }
+                .padding(Spacing.xl)
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 2) {
+                        ForEach(vm.memories) { memory in
+                            MemoryThumbnailView(memory: memory)
+                                .aspectRatio(1, contentMode: .fit)
+                        }
                     }
                 }
             }

@@ -76,7 +76,7 @@ module Api
       private
 
       def user_json(user)
-        { id: user.id, phone: user.phone, display_name: user.display_name, avatar_url: user.avatar_url }
+        { id: user.id, phone: user.phone, display_name: user.display_name, avatar_url: user.avatar_url, created_at: user.created_at }
       end
 
       def chapter_json(chapter)
