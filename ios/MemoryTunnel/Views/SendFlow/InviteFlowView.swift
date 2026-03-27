@@ -67,8 +67,8 @@ final class InviteFlowViewModel: ObservableObject {
                 visibility: "this_item"
             )
 
-            // 6. Create invitation link
-            createdInvitation = try await APIClient.shared.createInvitation(
+            // 6. Create invitation link (non-fatal — chapter + memory already exist)
+            createdInvitation = try? await APIClient.shared.createInvitation(
                 chapterID: chapter.id,
                 memoryID:  memory.id
             )
