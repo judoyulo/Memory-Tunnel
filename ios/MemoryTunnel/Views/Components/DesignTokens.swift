@@ -68,11 +68,14 @@ extension Font {
     // Body — captions, descriptions
     static let mtBody    = Font.system(size: 15, weight: .regular, design: .default)
 
-    // Label — UI labels, buttons, navigation
+    // Label — UI labels, list item names, navigation
     static let mtLabel   = Font.system(size: 15, weight: .medium, design: .default)
 
+    // Button — filled button labels (Primary, Accent, Destructive variants)
+    static let mtButton  = Font.system(size: 17, weight: .semibold, design: .default)
+
     // Caption — metadata, timestamps, micro-copy
-    static let mtCaption = Font.system(size: 13, weight: .regular, design: .default)
+    static let mtCaption = Font.system(size: 12, weight: .regular, design: .default)
 
     // Data — tabular figures
     static let mtData    = Font.system(size: 13, weight: .regular, design: .monospaced)
