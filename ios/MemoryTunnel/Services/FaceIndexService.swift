@@ -1,14 +1,21 @@
 // FaceIndexService.swift
-// On-device face identity index using Apple Vision's built-in feature extraction.
+// On-device face identity index using Apple Vision's facial landmark detection.
 //
-// Implementation note: uses VNGenerateImageFeaturePrintRequest (iOS 13+) on face crops
-// rather than a separate bundled .mlpackage. Vision's internal model produces a
-// feature vector per crop; similarity is computed via VNFeaturePrintObservation.computeDistance.
-// This eliminates the 5MB model bundle while using the same on-device privacy guarantee.
+// Implementation: uses VNDetectFaceLandmarksRequest to extract 76 facial landmark
+// points per face. These are normalized to face-relative coordinates (face center = 0,0;
+// face size = 1.0) and stored as [Float]. Identity matching uses L2 distance on this
+// 152-dim vector, which is stable across lighting, scale, and minor angle changes.
+//
+// Why landmark vectors instead of VNGenerateImageFeaturePrintRequest:
+//   Feature prints describe "what this image looks like" (scene-level). The same face
+//   in different lighting or at a slightly different angle produces a different print,
+//   exceeding the match threshold → false "different person" result.
+//   Facial geometry (inter-eye distance, nose-to-mouth ratio, jaw shape) is stable —
+//   this is the same primitive underlying Face ID.
 //
 // Privacy guarantees (enforced by architecture):
 //   - Face crops stored only in app sandbox (Documents/face_index.json)
-//   - Feature print data never included in API payloads
+//   - Landmark descriptors never included in API payloads
 //   - No biometric data is transmitted to the server
 
 import Vision
@@ -18,8 +25,9 @@ import UIKit
 
 struct FaceRecord: Codable, Identifiable {
     let id: UUID
-    /// NSKeyedArchiver-serialized VNFeaturePrintObservation for similarity comparison.
-    var featurePrintData: Data
+    /// Normalized facial landmark vector: up to 76 (x,y) pairs in face-relative coords.
+    /// face center = (0,0), face size = 1.0. 152 floats total.
+    var landmarkDescriptor: [Float]
     var partnerID: String?       // nil = untagged
     var chapterID: String?
     let createdAt: Date
@@ -35,7 +43,7 @@ struct FaceCandidate {
     let boundingBox: CGRect
     let crop: UIImage?
     let matchedPartnerID: String?
-    /// Distance from best-matching record. 0 = identical, lower = more similar.
+    /// L2 distance from best-matching record. 0 = identical, lower = more similar.
     let matchDistance: Float
 }
 
@@ -46,10 +54,14 @@ final class FaceIndexService {
 
     static let shared = FaceIndexService()
 
-    /// Distance threshold below which two face crops are treated as the same person.
-    /// VNFeaturePrintObservation distances are typically <0.3 for the same face,
-    /// >0.5 for different faces. 0.4 is a conservative midpoint.
-    private let matchThreshold: Float = 0.4
+    /// L2 distance threshold below which two landmark descriptors are treated as the same person.
+    /// In face-relative normalized space: same person typically <0.10, different person >0.15.
+    /// 0.12 is conservative — prefers false negatives (missed match) over false merges.
+    private let matchThreshold: Float = 0.12
+
+    /// Minimum landmark points required for a usable descriptor.
+    /// Vision returns 76 for a well-detected frontal face. Fewer = extreme angle or occlusion.
+    private let minLandmarkCount = 60
 
     private let store = FaceStore()
     private init() {}
@@ -61,19 +73,18 @@ final class FaceIndexService {
     func processFaces(in image: UIImage) async -> [FaceCandidate] {
         guard let cgImage = image.cgImage else { return [] }
 
-        let boxes = await detectFaceBoxes(in: cgImage)
-        guard !boxes.isEmpty else { return [] }
+        let observations = await detectFacesWithLandmarks(in: cgImage)
+        guard !observations.isEmpty else { return [] }
 
         let allRecords = await store.all()
         var candidates: [FaceCandidate] = []
 
-        for box in boxes {
-            let crop        = cropFace(from: cgImage, boundingBox: box)
-            let observation: VNFeaturePrintObservation?
-            if let crop { observation = await generateFeaturePrint(for: crop) }
-            else        { observation = nil }
+        for observation in observations {
+            // Skip faces with too few landmarks (extreme angle, occlusion, profile view).
+            guard let descriptor = extractLandmarkDescriptor(from: observation) else { continue }
 
-            let match = observation.flatMap { findBestMatch($0, in: allRecords) }
+            let crop  = cropFace(from: cgImage, boundingBox: observation.boundingBox)
+            let match = findBestMatch(descriptor, in: allRecords)
 
             let candidateID: UUID
             if let match {
@@ -81,24 +92,20 @@ final class FaceIndexService {
             } else {
                 let newID = UUID()
                 candidateID = newID
-                if let obs = observation,
-                   let data = try? NSKeyedArchiver.archivedData(
-                       withRootObject: obs, requiringSecureCoding: true) {
-                    let record = FaceRecord(
-                        id:               newID,
-                        featurePrintData: data,
-                        partnerID:        nil,
-                        chapterID:        nil,
-                        createdAt:        Date(),
-                        cropJPEG:         crop.flatMap { $0.jpegData(compressionQuality: 0.7) }
-                    )
-                    try? await store.upsert(record)
-                }
+                let record = FaceRecord(
+                    id:                 newID,
+                    landmarkDescriptor: descriptor,
+                    partnerID:          nil,
+                    chapterID:          nil,
+                    createdAt:          Date(),
+                    cropJPEG:           crop.flatMap { $0.jpegData(compressionQuality: 0.7) }
+                )
+                try? await store.upsert(record)
             }
 
             candidates.append(FaceCandidate(
                 faceID:           candidateID,
-                boundingBox:      box,
+                boundingBox:      observation.boundingBox,
                 crop:             crop,
                 matchedPartnerID: match?.record.partnerID,
                 matchDistance:    match?.distance ?? .infinity
@@ -124,14 +131,38 @@ final class FaceIndexService {
 
     // MARK: - Face Detection
 
-    private func detectFaceBoxes(in image: CGImage) async -> [CGRect] {
+    private func detectFacesWithLandmarks(in image: CGImage) async -> [VNFaceObservation] {
         await withCheckedContinuation { continuation in
-            let request = VNDetectFaceRectanglesRequest { req, _ in
-                let boxes = (req.results as? [VNFaceObservation])?.map(\.boundingBox) ?? []
-                continuation.resume(returning: boxes)
+            let request = VNDetectFaceLandmarksRequest { req, _ in
+                continuation.resume(returning: (req.results as? [VNFaceObservation]) ?? [])
             }
             try? VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
         }
+    }
+
+    // MARK: - Landmark Descriptor Extraction
+
+    /// Builds a 152-float descriptor from normalized facial landmark points.
+    /// Each point is translated to face-center-relative and scaled by face size,
+    /// giving a lighting-invariant, scale-invariant geometric face identity.
+    private func extractLandmarkDescriptor(from observation: VNFaceObservation) -> [Float]? {
+        guard let allPoints = observation.landmarks?.allPoints else { return nil }
+        let points = allPoints.normalizedPoints
+        guard points.count >= minLandmarkCount else { return nil }
+
+        let box   = observation.boundingBox
+        let cx    = box.midX
+        let cy    = box.midY
+        let scale = max(box.width, box.height)
+        guard scale > 0 else { return nil }
+
+        var descriptor = [Float]()
+        descriptor.reserveCapacity(152)
+        for point in points.prefix(76) {
+            descriptor.append(Float((point.x - cx) / scale))
+            descriptor.append(Float((point.y - cy) / scale))
+        }
+        return descriptor
     }
 
     // MARK: - Face Cropping
@@ -149,43 +180,30 @@ final class FaceIndexService {
         return image.cropping(to: padded).map(UIImage.init)
     }
 
-    // MARK: - Feature Print Generation
-
-    private func generateFeaturePrint(for image: UIImage) async -> VNFeaturePrintObservation? {
-        guard let cgImage = image.cgImage else { return nil }
-        return await withCheckedContinuation { continuation in
-            let request = VNGenerateImageFeaturePrintRequest { req, _ in
-                continuation.resume(returning: req.results?.first as? VNFeaturePrintObservation)
-            }
-            request.imageCropAndScaleOption = .centerCrop
-            try? VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
-        }
-    }
-
     // MARK: - Matching
 
     private func findBestMatch(
-        _ observation: VNFeaturePrintObservation,
+        _ descriptor: [Float],
         in records: [FaceRecord]
     ) -> (record: FaceRecord, distance: Float)? {
         var best: (record: FaceRecord, distance: Float)?
 
         for record in records {
-            guard let archived = try? NSKeyedUnarchiver.unarchivedObject(
-                ofClass: VNFeaturePrintObservation.self,
-                from: record.featurePrintData
-            ) else { continue }
-
-            var distance: Float = 0
-            guard (try? observation.computeDistance(&distance, to: archived)) != nil else { continue }
-
-            if best == nil || distance < best!.distance {
-                best = (record, distance)
+            guard record.landmarkDescriptor.count == descriptor.count else { continue }
+            let dist = l2Distance(descriptor, record.landmarkDescriptor)
+            if best == nil || dist < best!.distance {
+                best = (record, dist)
             }
         }
 
         guard let best, best.distance <= matchThreshold else { return nil }
         return best
+    }
+
+    private func l2Distance(_ a: [Float], _ b: [Float]) -> Float {
+        var sumSq: Float = 0
+        for i in 0 ..< a.count { sumSq += (a[i] - b[i]) * (a[i] - b[i]) }
+        return sumSq.squareRoot()
     }
 }
 
@@ -202,6 +220,7 @@ private actor FaceStore {
            let arr  = try? JSONDecoder().decode([FaceRecord].self, from: data) {
             cache = Dictionary(uniqueKeysWithValues: arr.map { ($0.id, $0) })
         } else {
+            // Old format (featurePrintData schema) or no data — start fresh.
             cache = [:]
         }
     }

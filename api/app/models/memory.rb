@@ -41,8 +41,7 @@ class Memory < ApplicationRecord
       bucket:      ENV.fetch("S3_BUCKET"),
       key:         key,
       expires_in:  900, # 15 minutes to complete upload
-      content_type: content_type,
-      acl:         "private"
+      content_type: content_type
     )
 
     { upload_url: upload_url, s3_key: key }
