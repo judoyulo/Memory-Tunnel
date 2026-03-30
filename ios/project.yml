@@ -35,6 +35,9 @@ targets:
       configs:
         Debug:
           OTHER_SWIFT_FLAGS: "-DDEBUG"
+          # API_BASE_URL: override here or in a .xcconfig file for your dev server
+          # e.g. API_BASE_URL: "http://192.168.1.244:3000"
+          # Release builds use the default empty string; set to your prod URL before archiving.
     entitlements:
       path: MemoryTunnel/MemoryTunnel.entitlements
       properties:
@@ -64,9 +67,12 @@ targets:
         NSPhotoLibraryUsageDescription: "Memory Tunnel needs access to your photos to send memories."
         NSCameraUsageDescription: "Memory Tunnel uses your camera to capture memories."
         NSContactsUsageDescription: "Memory Tunnel reads your contacts to detect birthdays."
-        API_BASE_URL: "http://192.168.1.244:3000"
+        API_BASE_URL: "$(API_BASE_URL)"
         NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
+          # NSAllowsLocalNetworking permits LAN connections (192.168.x.x, .local)
+          # without disabling ATS globally. Set API_BASE_URL to your dev server in
+          # the Debug build setting above. Production builds should use https:// — no ATS exception needed.
+          NSAllowsLocalNetworking: true
 
   MemoryTunnelWidget:
     type: app-extension

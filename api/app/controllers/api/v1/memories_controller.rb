@@ -29,9 +29,16 @@ module Api
       # Body: { s3_key:, caption:, taken_at:, visibility: }
       # Called after the client has confirmed the S3 upload succeeded.
       def create
+        # Validate s3_key is scoped to this chapter's prefix — prevents a user from
+        # claiming ownership of another user's S3 object by supplying an arbitrary key.
+        key = params.require(:s3_key).to_s
+        unless key.start_with?("memories/#{@chapter.id}/")
+          return render json: { error: "invalid s3_key" }, status: :unprocessable_entity
+        end
+
         memory = @chapter.memories.create!(
           owner:      current_user,
-          s3_key:     params.require(:s3_key),
+          s3_key:     key,
           caption:    params[:caption],
           taken_at:   params[:taken_at],
           visibility: params.fetch(:visibility, "this_item"),

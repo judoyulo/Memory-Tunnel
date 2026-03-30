@@ -36,6 +36,11 @@ class Memory < ApplicationRecord
     s3  = Aws::S3::Client.new(region: ENV.fetch("AWS_REGION", "us-east-1"))
     signer = Aws::S3::Presigner.new(client: s3)
 
+    # NOTE: `acl:` param is intentionally omitted. Passing `acl: "private"` fails on
+    # buckets with ObjectOwnership: BucketOwnerEnforced (ACLs disabled). Objects
+    # inherit the bucket's default private ACL. Verify your bucket has either
+    # ObjectOwnership: BucketOwnerEnforced OR a bucket policy blocking public access
+    # before relying on this behavior.
     upload_url = signer.presigned_url(
       :put_object,
       bucket:      ENV.fetch("S3_BUCKET"),

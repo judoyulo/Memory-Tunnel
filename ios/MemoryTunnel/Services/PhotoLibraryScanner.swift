@@ -125,7 +125,15 @@ actor PhotoLibraryScanner {
                 contentMode: .aspectFit,
                 options: options
             ) { image, info in
-                // Only resume on the final (non-degraded) result
+                // iCloud-only asset: isNetworkAccessAllowed = false means PhotoKit fires
+                // the callback exactly once with isDegraded = true and never again —
+                // leaving the continuation permanently suspended. Resume with nil immediately.
+                let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+                if isInCloud {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                // Only resume on the final (non-degraded) local result
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
                 if !isDegraded {
                     continuation.resume(returning: image)
