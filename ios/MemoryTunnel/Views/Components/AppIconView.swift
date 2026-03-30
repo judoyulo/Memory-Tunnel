@@ -17,6 +17,8 @@ import SwiftUI
 
 struct AppIconView: View {
     var size: CGFloat = 120
+    /// Scale applied to the inner amber circle — used by SplashView to pulse it once on launch.
+    var innerScale: CGFloat = 1.0
 
     var body: some View {
         ZStack {
@@ -31,6 +33,7 @@ struct AppIconView: View {
             Circle()
                 .fill(Color(red: 0.784, green: 0.584, blue: 0.424))
                 .frame(width: size * 0.21, height: size * 0.21)
+                .scaleEffect(innerScale)
         }
         .frame(width: size, height: size)
     }

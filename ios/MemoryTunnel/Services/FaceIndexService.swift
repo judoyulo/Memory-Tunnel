@@ -60,8 +60,10 @@ final class FaceIndexService {
     private let matchThreshold: Float = 0.12
 
     /// Minimum landmark points required for a usable descriptor.
-    /// Vision returns 76 for a well-detected frontal face. Fewer = extreme angle or occlusion.
-    private let minLandmarkCount = 60
+    /// Vision returns exactly 76 for a well-detected frontal face.
+    /// Requiring exactly 76 guarantees all descriptors are 152 floats — enabling reliable L2 matching.
+    /// Fewer points (profile, occlusion) are skipped to avoid variable-length descriptor mismatches.
+    private let minLandmarkCount = 76
 
     private let store = FaceStore()
     private init() {}
@@ -133,10 +135,15 @@ final class FaceIndexService {
 
     private func detectFacesWithLandmarks(in image: CGImage) async -> [VNFaceObservation] {
         await withCheckedContinuation { continuation in
-            let request = VNDetectFaceLandmarksRequest { req, _ in
-                continuation.resume(returning: (req.results as? [VNFaceObservation]) ?? [])
+            // Dispatch off main thread: VNImageRequestHandler.perform is synchronous and can take
+            // 200–500ms per image. FaceIndexService is @MainActor — without this dispatch the
+            // main thread would block for the entire Vision request, stalling the UI.
+            DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNDetectFaceLandmarksRequest { req, _ in
+                    continuation.resume(returning: (req.results as? [VNFaceObservation]) ?? [])
+                }
+                try? VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
             }
-            try? VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
         }
     }
 

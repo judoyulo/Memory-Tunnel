@@ -22,7 +22,7 @@ struct SplashView: View {
             Color(red: 0.961, green: 0.918, blue: 0.847)
                 .ignoresSafeArea()
 
-            AppIconView(size: 120)
+            AppIconView(size: 120, innerScale: innerPulse)
                 .scaleEffect(reduced ? 1 : markScale)
                 .opacity(markOpacity)
         }
