@@ -84,6 +84,26 @@ extension Font {
 // MARK: - Animation
 
 extension Animation {
-    static let mtFade  = Animation.easeOut(duration: 0.20)
-    static let mtSlide = Animation.easeOut(duration: 0.30)
+    /// Quick opacity change — photo fade-in, confirmation appear/disappear.
+    static let mtFade   = Animation.easeOut(duration: 0.20)
+    /// Slide-based step transitions — onboarding steps, Smart Start states.
+    static let mtSlide  = Animation.easeOut(duration: 0.30)
+    /// Photo reveal — cinematic darkroom-print entrance (scale 0.97→1 + fade).
+    static let mtReveal = Animation.easeOut(duration: 0.45)
+    /// Interactive spring — button press, card tap, face card appear.
+    static let mtSpring = Animation.spring(response: 0.35, dampingFraction: 0.75)
+    /// Confirmation bounce — amber checkmark, badge pop.
+    static let mtBounce = Animation.spring(response: 0.40, dampingFraction: 0.60)
+}
+
+// MARK: - Spring Button Style
+
+/// Applies a subtle spring scale effect on press — makes every tap feel responsive.
+/// Usage: .buttonStyle(MTSpringButtonStyle())
+struct MTSpringButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(.mtSpring, value: configuration.isPressed)
+    }
 }

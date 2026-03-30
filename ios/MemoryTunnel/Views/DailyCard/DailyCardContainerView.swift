@@ -47,7 +47,13 @@ struct DailyCardContainerView: View {
                 .padding(Spacing.xl)
             } else if let card = vm.card {
                 DailyCardView(card: card)
-                    .transition(.opacity.animation(.mtFade))
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.97))
+                                .animation(.mtReveal),
+                            removal: .opacity.animation(.mtFade)
+                        )
+                    )
             } else {
                 DailyCardEmptyView()
             }

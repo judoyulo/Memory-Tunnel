@@ -6,17 +6,28 @@ struct MemoryTunnelApp: App {
     @StateObject private var router = NotificationRouter.shared
     @StateObject private var appState = AppState()
 
+    @State private var showSplash = true
+
     var body: some Scene {
         WindowGroup {
-            Group {
-                if appState.isAuthenticated {
-                    ContentView()
-                } else {
-                    OnboardingView()
+            ZStack {
+                Group {
+                    if appState.isAuthenticated {
+                        ContentView()
+                    } else {
+                        OnboardingView()
+                    }
+                }
+                .environmentObject(appState)
+                .environmentObject(router)
+
+                if showSplash {
+                    SplashView { showSplash = false }
+                        .transition(.opacity.animation(.mtFade))
+                        .zIndex(1)
                 }
             }
-            .environmentObject(appState)
-            .environmentObject(router)
+            .animation(.mtFade, value: showSplash)
             .preferredColorScheme(.light)   // Design system: light only (cream bg)
         }
     }

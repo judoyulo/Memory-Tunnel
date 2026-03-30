@@ -30,6 +30,7 @@ targets:
         INFOPLIST_FILE: MemoryTunnel/Info.plist
         CODE_SIGN_STYLE: Automatic
         ENABLE_PREVIEWS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # App Groups for widget shared defaults
       configs:
         Debug:
@@ -39,7 +40,6 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.memorytunnel.app
-        aps-environment: development
     dependencies:
       - framework: Vision.framework
         weak: false
@@ -55,7 +55,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundlePackageType: APPL
         UILaunchScreen:
-          UIColorName: ""
+          UIColorName: "LaunchBackground"
           UIImageName: ""
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
@@ -64,8 +64,9 @@ targets:
         NSPhotoLibraryUsageDescription: "Memory Tunnel needs access to your photos to send memories."
         NSCameraUsageDescription: "Memory Tunnel uses your camera to capture memories."
         NSContactsUsageDescription: "Memory Tunnel reads your contacts to detect birthdays."
-        UIBackgroundModes:
-          - remote-notification
+        API_BASE_URL: "http://192.168.1.244:3000"
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
 
   MemoryTunnelWidget:
     type: app-extension
