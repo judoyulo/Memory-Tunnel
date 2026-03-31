@@ -292,8 +292,10 @@ struct SentStep: View {
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.mtAccent)
-                        .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
+                        )
                 }
                 .sheet(isPresented: $showShareSheet) {
                     ShareSheet(items: [url])

@@ -19,6 +19,9 @@ extension Color {
     // ✓ Sent confirmation, birthday trigger dot, decay notification dot
     static let mtAccent     = Color(hex: "#C8956C")   // warm amber
 
+    // Semantic
+    static let mtError      = Color(hex: "#E04F4F")   // error text / destructive hint
+
     // Convenience initializer from hex string
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -76,6 +79,9 @@ extension Font {
 
     // Caption — metadata, timestamps, micro-copy
     static let mtCaption = Font.system(size: 12, weight: .regular, design: .default)
+
+    // Empty state title — 22pt Regular per DESIGN.md empty state spec
+    static let mtEmptyTitle = Font.system(size: 22, weight: .regular, design: .default)
 
     // Data — tabular figures
     static let mtData    = Font.system(size: 13, weight: .regular, design: .monospaced)

@@ -143,7 +143,7 @@ struct FaceTaggingOverlay: ViewModifier {
                         }
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(.easeInOut(duration: 0.25), value: currentFace?.id)
+                    .animation(.mtSlide, value: currentFace?.id)
                 }
             }
             .task {

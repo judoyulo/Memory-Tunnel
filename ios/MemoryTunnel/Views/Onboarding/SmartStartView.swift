@@ -235,7 +235,7 @@ private struct SmartStartIntroScreen: View {
 
                 VStack(spacing: Spacing.sm) {
                     Text("Who do you want\nto stay close to?")
-                        .font(.system(size: 22, weight: .regular))
+                        .font(.mtEmptyTitle)
                         .foregroundStyle(Color.mtLabel)
                         .multilineTextAlignment(.center)
 
@@ -275,7 +275,7 @@ private struct SmartStartIntroScreen: View {
                         .background(Color.mtBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: Radius.button)
-                                .stroke(Color.mtLabel, lineWidth: 1)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
                         )
                 }
                 .accessibilityLabel("Skip face suggestions, open the app")
@@ -322,7 +322,7 @@ private struct SmartStartScanningScreen: View {
                     .background(Color.mtBackground)
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.button)
-                            .stroke(Color.mtLabel, lineWidth: 1)
+                            .stroke(Color.mtLabel, lineWidth: 1.5)
                     )
             }
 
@@ -344,7 +344,7 @@ private struct SmartStartSuggestionsScreen: View {
                     // Header
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("People from your photos")
-                            .font(.system(size: 22, weight: .regular))
+                            .font(.mtEmptyTitle)
                             .foregroundStyle(Color.mtLabel)
                         Text("Start a chapter with someone who matters.")
                             .font(.mtBody)
@@ -393,7 +393,7 @@ private struct SmartStartSuggestionsScreen: View {
                         .background(Color.mtBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: Radius.button)
-                                .stroke(Color.mtLabel, lineWidth: 1)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
                         )
                 }
                 .padding(.horizontal, Spacing.xl)
@@ -611,7 +611,7 @@ private struct SmartStartCaptionScreen: View {
             if let err = vm.errorMessage {
                 Text(err)
                     .font(.mtCaption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.mtError)
                     .padding(.horizontal, Spacing.xl)
                     .padding(.top, Spacing.sm)
             }
@@ -737,7 +737,7 @@ private struct SmartStartCompleteScreen: View {
                         .background(Color.mtBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: Radius.button)
-                                .stroke(Color.mtLabel, lineWidth: 1)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
                         )
                 }
             }

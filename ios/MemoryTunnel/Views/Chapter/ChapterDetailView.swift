@@ -68,9 +68,9 @@ struct ChapterDetailView: View {
                     Spacer()
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 48))
-                        .foregroundStyle(Color.mtAccent)
+                        .foregroundStyle(Color.mtTertiary)
                     Text("No memories yet")
-                        .font(.system(size: 22, weight: .regular))
+                        .font(.mtEmptyTitle)
                         .foregroundStyle(Color.mtLabel)
                     Text("Send the first memory\nto start this chapter.")
                         .font(.mtBody)
@@ -166,7 +166,7 @@ struct VoiceClipTileView: View {
 
                 Image(systemName: "waveform")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.mtAccent)
+                    .foregroundStyle(Color.mtSecondary)
             }
         }
         .contentShape(Rectangle())

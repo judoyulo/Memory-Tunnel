@@ -148,7 +148,7 @@ struct PhoneStep: View {
                 .onAppear { focused = true }
 
             if let err = vm.errorMessage {
-                Text(err).font(.mtCaption).foregroundStyle(.red)
+                Text(err).font(.mtCaption).foregroundStyle(Color.mtError)
             }
 
             PrimaryButton(title: "Continue", isLoading: vm.isLoading) {
@@ -173,7 +173,7 @@ struct CodeStep: View {
 
             TextField("000000", text: $vm.code)
                 .keyboardType(.numberPad)
-                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .font(.system(size: 28, weight: .medium, design: .monospaced))
                 .multilineTextAlignment(.center)
                 .padding(Spacing.md)
                 .background(Color.mtSurface)
@@ -182,7 +182,7 @@ struct CodeStep: View {
                 .onAppear { focused = true }
 
             if let err = vm.errorMessage {
-                Text(err).font(.mtCaption).foregroundStyle(.red)
+                Text(err).font(.mtCaption).foregroundStyle(Color.mtError)
             }
 
             PrimaryButton(title: "Verify", isLoading: vm.isLoading) {

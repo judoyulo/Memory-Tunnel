@@ -137,6 +137,8 @@ struct ChapterTileView: View {
                     Text("Share")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.mtLabel)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Share invite link for \(chapter.name ?? "this chapter")")
             } else if isDecayed {
@@ -182,9 +184,9 @@ struct ChapterListEmptyView: View {
             Spacer()
             Image(systemName: "envelope.heart.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(Color.mtAccent)
+                .foregroundStyle(Color.mtTertiary)
             Text("Start your first chapter")
-                .font(.system(size: 22, weight: .regular))
+                .font(.mtEmptyTitle)
                 .foregroundStyle(Color.mtLabel)
             Text("Send a first memory to someone\nyou want to stay close to.")
                 .font(.mtBody)

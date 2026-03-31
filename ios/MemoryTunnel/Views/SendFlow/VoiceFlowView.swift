@@ -151,7 +151,7 @@ private struct RecordStep: View {
             WaveformView(level: recorder.level, isAnimating: recorder.isRecording)
                 .frame(height: 56)
                 .opacity(recorder.isRecording ? 1 : 0.35)
-                .animation(.easeInOut(duration: 0.2), value: recorder.isRecording)
+                .animation(.mtFade, value: recorder.isRecording)
 
             RecordButton(
                 isRecording: recorder.isRecording,
