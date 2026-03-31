@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 
 /// Loads today's daily card and presents it full-screen.
 /// If no card is queued, shows a calm empty state — not an error.
@@ -15,6 +16,7 @@ final class DailyCardViewModel: ObservableObject {
         defer { isLoading = false; hasLoaded = true }
         do {
             card = try await APIClient.shared.dailyCard()
+            updateWidgetData()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -22,6 +24,25 @@ final class DailyCardViewModel: ObservableObject {
 
     func markOpened() {
         Task { try? await APIClient.shared.markDailyCardOpened() }
+    }
+
+    /// Write daily card data to App Group shared UserDefaults so the widget can display it.
+    private func updateWidgetData() {
+        guard let defaults = UserDefaults(suiteName: "group.com.memorytunnel.app") else { return }
+
+        if let card {
+            defaults.set(card.chapter.partner?.displayName, forKey: "widget.partnerName")
+            defaults.set(card.memories.first?.mediaURL.absoluteString, forKey: "widget.imageURL")
+            defaults.set(card.chapter.id, forKey: "widget.chapterID")
+        } else {
+            // No card today — clear widget data so it shows the calm empty state
+            defaults.removeObject(forKey: "widget.partnerName")
+            defaults.removeObject(forKey: "widget.imageURL")
+            defaults.removeObject(forKey: "widget.chapterID")
+        }
+
+        // Tell WidgetKit to refresh
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
 

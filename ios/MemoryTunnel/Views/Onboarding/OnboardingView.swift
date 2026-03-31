@@ -14,8 +14,10 @@ final class OnboardingViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isComplete = false
 
-    // Set by Branch.io deferred deep link if user came via invitation
-    var invitationToken: String?
+    // Consumed from DeepLinkStore if user came via Branch.io deferred deep link
+    var invitationToken: String? {
+        DeepLinkStore.shared.pendingInvitationToken
+    }
 
     func sendOTP() async {
         guard !phone.isEmpty else { return }
@@ -33,12 +35,15 @@ final class OnboardingViewModel: ObservableObject {
         guard !code.isEmpty else { return }
         isLoading = true; defer { isLoading = false }
         do {
+            let token = invitationToken
             let response = try await APIClient.shared.verifyOTP(
                 phone:           normalizedPhone,
                 code:            code,
                 displayName:     nil,
-                invitationToken: invitationToken
+                invitationToken: token
             )
+            // Consume the deferred deep link token so it's not replayed
+            if token != nil { DeepLinkStore.shared.pendingInvitationToken = nil }
             // New user — ask for name; existing user — go straight in
             if response.user.displayName == "User" {
                 step = .name

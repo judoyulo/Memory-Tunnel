@@ -48,6 +48,19 @@ Existing `face_index.json` in `Documents/` won't migrate to `Application Support
 Low impact (playback category only, not record), but can interfere with other apps.
 **File:** `ios/MemoryTunnel/Views/SendFlow/VoiceFlowView.swift`
 
+### Branch.io SPM package must be added to Xcode project — P1
+Code is wired (`MemoryTunnelApp.swift` imports `BranchSDK`, `AppDelegate` calls `Branch.getInstance().initSession`).
+**Remaining:** Add `https://github.com/BranchMetrics/ios-branch-sdk-spm` as an SPM dependency in Xcode.
+Also add Branch key to `Info.plist` (`branch_key` → live/test key from Branch dashboard).
+Also add Associated Domains capability for Universal Links (`applinks:memorytunnel.app.link`).
+**Why:** Can't be done from code alone — requires Xcode project settings.
+
+### APNs credentials must be provisioned — P1
+Code is complete (`ApnsService`, push jobs, iOS push registration all wired).
+**Remaining:** Generate an APNs key in Apple Developer, fill `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_P8_KEY` in `.env` / production env.
+Boot check initializer (`apns_check.rb`) logs a warning if these are missing.
+**Why:** Without these, push notifications silently no-op.
+
 ### Face matching not validated in production — P2
 `FaceIndexService` uses Vision landmark vectors with L2 distance (threshold: 0.12) for identity clustering.
 Not tested on real-world diversity (lighting variation, glasses, masks, age range, skin tone).
