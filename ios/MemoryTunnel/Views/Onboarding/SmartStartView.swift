@@ -543,6 +543,13 @@ struct SmartStartPhotoPicker: View {
                 contentMode: .aspectFit,
                 options: options
             ) { image, info in
+                // iCloud-only assets with isNetworkAccessAllowed=false fire once with
+                // isDegraded=true and never again — resume with nil to prevent hang.
+                let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+                if isInCloud {
+                    continuation.resume(returning: nil)
+                    return
+                }
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
                 if !isDegraded {
                     continuation.resume(returning: image)
@@ -588,6 +595,11 @@ private struct PHAssetThumbnailView: View {
                 contentMode: .aspectFill,
                 options: options
             ) { image, info in
+                let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+                if isInCloud {
+                    continuation.resume(returning: nil)
+                    return
+                }
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
                 if !isDegraded {
                     continuation.resume(returning: image)
