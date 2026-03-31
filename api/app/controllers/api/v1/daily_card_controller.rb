@@ -45,6 +45,10 @@ module Api
         end
 
         head :ok
+      rescue ActiveRecord::RecordNotUnique
+        # Another card was already queued today (unique index: user_id + scheduled_for).
+        # The signal is idempotent — treat the constraint as success.
+        head :ok
       end
 
       # POST /api/v1/daily_card/open
