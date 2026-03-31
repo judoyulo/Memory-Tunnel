@@ -35,6 +35,7 @@ final class SendFlowViewModel: ObservableObject {
     }
 
     func send() async {
+        guard case .addCaption = step else { return }
         guard let image = selectedImage else { return }
         step = .sending
 
