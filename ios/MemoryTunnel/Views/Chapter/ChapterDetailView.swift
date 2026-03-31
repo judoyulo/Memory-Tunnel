@@ -154,6 +154,7 @@ struct MemoryThumbnailView: View {
 struct VoiceClipTileView: View {
     let memory: Memory
     @State private var showPlayer = false
+    @State private var localAudioURL: URL?
 
     var body: some View {
         ZStack {
@@ -178,12 +179,29 @@ struct VoiceClipTileView: View {
                     .font(.mtBody)
                     .foregroundStyle(Color.mtSecondary)
                     .multilineTextAlignment(.center)
-                VoicePlayerView(url: memory.mediaURL)
-                    .padding(.horizontal, Spacing.xl)
+                if let localURL = localAudioURL {
+                    VoicePlayerView(url: localURL)
+                        .padding(.horizontal, Spacing.xl)
+                } else {
+                    ProgressView()
+                        .frame(height: 72)
+                        .padding(.horizontal, Spacing.xl)
+                }
                 Spacer()
             }
             .presentationDetents([.medium])
             .background(Color.mtBackground)
+            .task { await downloadAudioIfNeeded() }
         }
+    }
+
+    private func downloadAudioIfNeeded() async {
+        guard localAudioURL == nil else { return }
+        guard let data = try? await URLSession.shared.data(from: memory.mediaURL).0 else { return }
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent(memory.id)
+            .appendingPathExtension("m4a")
+        try? data.write(to: tmp)
+        await MainActor.run { localAudioURL = tmp }
     }
 }

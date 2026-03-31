@@ -18,3 +18,32 @@ DESIGN.md written to repo root. Background: `#F5EAD8` warm cream. Full token set
 **Effort:** S (human: 1 week / CC: ~30min)
 **Priority:** P1
 **Depends on:** Core D3 server implementation must exist first.
+
+---
+
+## Found During Smart Start / Ship Pass (2026-03-31)
+
+### Orphaned chapter on upload failure — P2
+`SmartStartViewModel.send()` creates the chapter before the S3 upload. Upload failure leaves a `pending` chapter with no memory.
+**Fix:** `DELETE /api/v1/chapters/:id` endpoint + rollback on iOS upload error.
+**File:** `ios/MemoryTunnel/Views/Onboarding/SmartStartView.swift:116`
+
+### Voice playback silent failure — P2
+`VoiceClipTileView.downloadAudioIfNeeded()` silently fails on network error or expired signed URL.
+**Fix:** Show error state or retry CTA in the sheet.
+**File:** `ios/MemoryTunnel/Views/Chapter/ChapterDetailView.swift`
+
+### Signed URL TTL not tracked client-side — P2
+Media URLs expire after ~60 min. `refresh_url` endpoint exists but iOS never calls it proactively.
+**Fix:** Track `signedAt` timestamp on `Memory`, call `refresh_url` when TTL > 50 min.
+**File:** `ios/MemoryTunnel/Models/Models.swift`
+
+### Face index migration on update — P3
+Existing `face_index.json` in `Documents/` won't migrate to `Application Support/` automatically. First post-update launch silently starts a fresh index.
+**Fix:** On init, check old path and move file if present (one-time migration).
+**File:** `ios/MemoryTunnel/Services/FaceIndexService.swift`
+
+### AVAudioSession not deactivated after playback — P3
+`VoicePlayerView.stopPlayback()` doesn't call `AVAudioSession.sharedInstance().setActive(false)`.
+Low impact (playback category only, not record), but can interfere with other apps.
+**File:** `ios/MemoryTunnel/Views/SendFlow/VoiceFlowView.swift`

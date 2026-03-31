@@ -181,8 +181,10 @@ private actor BirthdayCache {
     private var store: [String: BirthdayComponents]
 
     init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        url = docs.appendingPathComponent("birthday_index.json")
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        url = appSupport.appendingPathComponent("birthday_index.json")
+        try? (url as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
         if let data    = try? Data(contentsOf: url),
            let decoded = try? JSONDecoder().decode([String: BirthdayComponents].self, from: data) {
             store = decoded

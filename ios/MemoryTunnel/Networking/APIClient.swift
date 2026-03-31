@@ -241,7 +241,7 @@ actor APIClient {
 
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         let (data, response) = try await URLSession.shared.data(for: request)
-        let http = response as! HTTPURLResponse
+        guard let http = response as? HTTPURLResponse else { throw APIError.httpError(0, "invalid response") }
 
         if http.statusCode == 204 { throw APIError.noContent }
 
@@ -259,7 +259,7 @@ actor APIClient {
 
     private func performVoid(_ request: URLRequest) async throws {
         let (data, response) = try await URLSession.shared.data(for: request)
-        let http = response as! HTTPURLResponse
+        guard let http = response as? HTTPURLResponse else { throw APIError.httpError(0, "invalid response") }
         guard (200..<300).contains(http.statusCode) else {
             let msg = String(data: data, encoding: .utf8)
             throw APIError.httpError(http.statusCode, msg)

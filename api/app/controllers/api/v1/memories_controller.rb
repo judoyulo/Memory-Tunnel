@@ -32,7 +32,7 @@ module Api
         # Validate s3_key is scoped to this chapter's prefix — prevents a user from
         # claiming ownership of another user's S3 object by supplying an arbitrary key.
         key = params.require(:s3_key).to_s
-        unless key.start_with?("memories/#{@chapter.id}/")
+        unless key.start_with?("memories/#{@chapter.id}/") && !key.include?("..")
           return render json: { error: "invalid s3_key" }, status: :unprocessable_entity
         end
 

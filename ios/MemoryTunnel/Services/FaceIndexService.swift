@@ -221,8 +221,12 @@ private actor FaceStore {
     private var cache: [UUID: FaceRecord]
 
     init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        url = docs.appendingPathComponent("face_index.json")
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        url = appSupport.appendingPathComponent("face_index.json")
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = true
+        try? (url as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
         if let data = try? Data(contentsOf: url),
            let arr  = try? JSONDecoder().decode([FaceRecord].self, from: data) {
             cache = Dictionary(uniqueKeysWithValues: arr.map { ($0.id, $0) })

@@ -169,7 +169,7 @@ struct ChapterTileView: View {
     }
 
     private var isDecayed: Bool {
-        guard let last = chapter.lastMemoryAt else { return true }
+        guard let last = chapter.lastMemoryAt else { return false }
         return last < Calendar.current.date(byAdding: .day, value: -90, to: Date())!
     }
 }

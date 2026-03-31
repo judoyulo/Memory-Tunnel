@@ -91,6 +91,7 @@ final class VoiceMemoryService: NSObject, ObservableObject {
         durationTimer?.invalidate(); durationTimer = nil
         isRecording = false
         level       = 0
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }
 

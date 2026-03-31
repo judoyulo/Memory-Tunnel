@@ -59,7 +59,7 @@ module Api
                   .where.not(delivered_at: nil)
                   .first
 
-        entry&.update_column(:opened_at, Time.current)
+        entry&.update_column(:opened_at, Time.current) if entry&.opened_at.nil?
         head :ok
       end
 
