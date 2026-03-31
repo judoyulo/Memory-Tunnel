@@ -23,7 +23,9 @@ enum SmartStartState: Equatable {
         switch (lhs, rhs) {
         case (.intro, .intro), (.scanning, .scanning), (.suggestions, .suggestions),
              (.uploading, .uploading): return true
-        case (.photoPicker(let a), .photoPicker(let b)): return a == b
+        case (.photoPicker(let a), .photoPicker(let b)):   return a == b
+        case (.captioning(let a, _), .captioning(let b, _)): return a == b
+        case (.complete(let a, let n1, _), .complete(let b, let n2, _)): return a == b && n1 == n2
         default: return false
         }
     }
@@ -86,8 +88,8 @@ final class SmartStartViewModel: ObservableObject {
 
     func nameBinding(for index: Int) -> Binding<String> {
         Binding(
-            get: { self.suggestions[index].name },
-            set: { self.suggestions[index].name = $0 }
+            get: { index < self.suggestions.count ? self.suggestions[index].name : "" },
+            set: { guard index < self.suggestions.count else { return }; self.suggestions[index].name = $0 }
         )
     }
 
@@ -212,9 +214,16 @@ struct SmartStartView: View {
         .onAppear {
             vm.onComplete = onComplete
 
-            // Skip SmartStart for returning users or users who already have chapters
+            // Skip SmartStart for returning users (flag) or users who already have chapters
             let hasRun = UserDefaults.standard.bool(forKey: "smartStartCompleted")
-            if hasRun { onComplete() }
+            if hasRun { onComplete(); return }
+
+            Task {
+                if let chapters = try? await APIClient.shared.chapters(), !chapters.isEmpty {
+                    UserDefaults.standard.set(true, forKey: "smartStartCompleted")
+                    onComplete()
+                }
+            }
         }
     }
 }
@@ -414,59 +423,61 @@ private struct FaceCardRow: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        let suggestion = vm.suggestions[index]
-        let nameIsEmpty = suggestion.name.trimmingCharacters(in: .whitespaces).isEmpty
+        if index < vm.suggestions.count {
+            let suggestion = vm.suggestions[index]
+            let nameIsEmpty = suggestion.name.trimmingCharacters(in: .whitespaces).isEmpty
 
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: Spacing.md) {
-                // Face crop circle
-                Image(uiImage: suggestion.sampleCrop)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 56, height: 56)
-                    .clipShape(Circle())
-                    .accessibilityLabel("Unrecognized person from your photos")
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack(spacing: Spacing.md) {
+                    // Face crop circle
+                    Image(uiImage: suggestion.sampleCrop)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 56, height: 56)
+                        .clipShape(Circle())
+                        .accessibilityLabel("Unrecognized person from your photos")
 
-                // Name field — underline only style
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField("Their name", text: vm.nameBinding(for: index))
-                        .font(.mtBody)
-                        .foregroundStyle(Color.mtLabel)
-                        .focused($focused)
-                        .onAppear { if autoFocus { focused = true } }
-                        .accessibilityLabel("Enter name for this person")
+                    // Name field — underline only style
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField("Their name", text: vm.nameBinding(for: index))
+                            .font(.mtBody)
+                            .foregroundStyle(Color.mtLabel)
+                            .focused($focused)
+                            .onAppear { if autoFocus { focused = true } }
+                            .accessibilityLabel("Enter name for this person")
 
-                    Rectangle()
-                        .fill(focused ? Color.mtLabel : Color.mtLabel.opacity(0.2))
-                        .frame(height: 1)
+                        Rectangle()
+                            .fill(focused ? Color.mtLabel : Color.mtLabel.opacity(0.2))
+                            .frame(height: 1)
+                    }
                 }
-            }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.md)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.md)
 
-            // Start a chapter CTA
-            Button {
-                vm.openPhotoPicker(for: index)
-            } label: {
-                HStack {
-                    Text("Start a chapter")
-                    Image(systemName: "arrow.right")
+                // Start a chapter CTA
+                Button {
+                    vm.openPhotoPicker(for: index)
+                } label: {
+                    HStack {
+                        Text("Start a chapter")
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.mtButton)
+                    .foregroundStyle(nameIsEmpty ? Color.mtBackground.opacity(0.4) : Color.mtBackground)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(nameIsEmpty ? Color.mtLabel.opacity(0.4) : Color.mtLabel)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.button))
                 }
-                .font(.mtButton)
-                .foregroundStyle(nameIsEmpty ? Color.mtBackground.opacity(0.4) : Color.mtBackground)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(nameIsEmpty ? Color.mtLabel.opacity(0.4) : Color.mtLabel)
-                .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                .disabled(nameIsEmpty)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.bottom, Spacing.md)
+                .accessibilityLabel(
+                    nameIsEmpty
+                    ? "Enter a name to start a chapter"
+                    : "Start a chapter with \(suggestion.name)"
+                )
             }
-            .disabled(nameIsEmpty)
-            .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, Spacing.md)
-            .accessibilityLabel(
-                nameIsEmpty
-                ? "Enter a name to start a chapter"
-                : "Start a chapter with \(suggestion.name)"
-            )
         }
     }
 }
@@ -476,6 +487,7 @@ private struct FaceCardRow: View {
 struct SmartStartPhotoPicker: View {
     @ObservedObject var vm: SmartStartViewModel
     let suggestionIndex: Int
+    @State private var cloudAssets: Set<String> = []
 
     private let columns = [
         GridItem(.flexible(), spacing: 2),
@@ -488,7 +500,9 @@ struct SmartStartPhotoPicker: View {
             ZStack {
                 Color.mtBackground.ignoresSafeArea()
 
-                let assets = vm.suggestions[suggestionIndex].recentAssets
+                let assets = suggestionIndex < vm.suggestions.count
+                    ? vm.suggestions[suggestionIndex].recentAssets
+                    : []
 
                 if assets.isEmpty {
                     VStack(spacing: Spacing.md) {
@@ -505,21 +519,35 @@ struct SmartStartPhotoPicker: View {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 2) {
                             ForEach(assets, id: \.localIdentifier) { asset in
-                                PHAssetThumbnailView(asset: asset)
+                                let inCloud = cloudAssets.contains(asset.localIdentifier)
+                                PHAssetThumbnailView(asset: asset,
+                                                    onCloudDetected: { cloudAssets.insert(asset.localIdentifier) })
                                     .aspectRatio(1, contentMode: .fit)
+                                    .opacity(inCloud ? 0.35 : 1)
+                                    .overlay(
+                                        inCloud
+                                            ? Image(systemName: "icloud")
+                                                  .foregroundStyle(Color.mtSecondary)
+                                            : nil
+                                    )
                                     .onTapGesture {
+                                        guard !inCloud else { return }
                                         Task {
                                             if let image = await loadFullImage(for: asset) {
                                                 await vm.selectPhoto(image, forIndex: suggestionIndex)
                                             }
                                         }
                                     }
+                                    .accessibilityHidden(inCloud)
                             }
                         }
                     }
                 }
             }
-            .navigationTitle("Photos with \(vm.suggestions[suggestionIndex].name.isEmpty ? "this person" : vm.suggestions[suggestionIndex].name)")
+            .navigationTitle({
+                let name = suggestionIndex < vm.suggestions.count ? vm.suggestions[suggestionIndex].name : ""
+                return "Photos with \(name.isEmpty ? "this person" : name)"
+            }())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -563,7 +591,13 @@ struct SmartStartPhotoPicker: View {
 
 private struct PHAssetThumbnailView: View {
     let asset: PHAsset
+    let onCloudDetected: (() -> Void)?
     @State private var thumbnail: UIImage?
+
+    init(asset: PHAsset, onCloudDetected: (() -> Void)? = nil) {
+        self.asset = asset
+        self.onCloudDetected = onCloudDetected
+    }
 
     var body: some View {
         ZStack {
@@ -597,6 +631,7 @@ private struct PHAssetThumbnailView: View {
             ) { image, info in
                 let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
                 if isInCloud {
+                    Task { @MainActor in onCloudDetected?() }
                     continuation.resume(returning: nil)
                     return
                 }

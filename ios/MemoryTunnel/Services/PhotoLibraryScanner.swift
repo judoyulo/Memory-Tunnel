@@ -12,7 +12,7 @@ import UIKit
 // MARK: - FaceSuggestion
 
 struct FaceSuggestion: Identifiable {
-    let id: UUID               // faceID from FaceIndexService
+    let id: UUID               // local cluster ID (not persisted to FaceIndexService)
     let sampleCrop: UIImage    // best crop from the most-recent photo containing this face
     let recentAssets: [PHAsset] // all assets where this face was detected (for picker)
     var name: String = ""      // user-supplied name, filled in SmartStartView
@@ -56,10 +56,18 @@ actor PhotoLibraryScanner {
 
         guard !assetList.isEmpty else { return [] }
 
-        // Tally: faceID → (count, sample crop, [PHAsset])
-        var occurrences: [UUID: Int] = [:]
-        var sampleCrops: [UUID: UIImage] = [:]
-        var assetsByFace: [UUID: [PHAsset]] = [:]
+        // In-memory face clusters — never writes to FaceStore.
+        // Each cluster represents one person, identified by L2 distance on landmark descriptors.
+        // This works for new users (empty FaceStore) and avoids flooding FaceTaggingBanner.
+        struct LocalCluster {
+            let id: UUID
+            let descriptor: [Float]
+            var count: Int
+            var bestCrop: UIImage?
+            var assets: [PHAsset]
+        }
+        var clusters: [LocalCluster] = []
+        let threshold = FaceIndexService.clusterThreshold
 
         // Process with a 10-second hard timeout
         let deadline = Date().addingTimeInterval(10)
@@ -75,33 +83,49 @@ actor PhotoLibraryScanner {
 
             guard let image = await loadImage(for: asset, targetSize: 512) else { continue }
 
-            let candidates = await FaceIndexService.shared.processFaces(in: image)
+            // detectDescriptors: Vision landmark extraction only — no FaceStore reads or writes.
+            // Clustering happens here in-memory so no FaceRecords are created for strangers.
+            let descriptors = await FaceIndexService.shared.detectDescriptors(in: image)
 
-            for candidate in candidates {
-                let fid = candidate.faceID
-                occurrences[fid, default: 0] += 1
-
-                // Keep first-seen crop as sample
-                if sampleCrops[fid] == nil, let crop = candidate.crop {
-                    sampleCrops[fid] = crop
+            for (descriptor, crop) in descriptors {
+                // Find nearest existing cluster within threshold
+                var bestIdx: Int?
+                var bestDist = Float.infinity
+                for (i, cluster) in clusters.enumerated() {
+                    let dist = FaceIndexService.shared.l2Distance(descriptor, cluster.descriptor)
+                    if dist < bestDist {
+                        bestDist = dist
+                        bestIdx = i
+                    }
                 }
 
-                assetsByFace[fid, default: []].append(asset)
+                if let idx = bestIdx, bestDist <= threshold {
+                    clusters[idx].count += 1
+                    clusters[idx].assets.append(asset)
+                    if clusters[idx].bestCrop == nil { clusters[idx].bestCrop = crop }
+                } else {
+                    clusters.append(LocalCluster(
+                        id:         UUID(),
+                        descriptor: descriptor,
+                        count:      1,
+                        bestCrop:   crop,
+                        assets:     [asset]
+                    ))
+                }
             }
         }
 
         // Filter: at least 2 appearances, sort descending by count, take top N
-        let suggestions = occurrences
-            .filter { $0.value >= 2 }
-            .sorted { $0.value > $1.value }
+        let suggestions = clusters
+            .filter { $0.count >= 2 }
+            .sorted { $0.count > $1.count }
             .prefix(topN)
-            .compactMap { (faceID, _) -> FaceSuggestion? in
-                guard let crop = sampleCrops[faceID] else { return nil }
-                let assets = assetsByFace[faceID] ?? []
+            .compactMap { cluster -> FaceSuggestion? in
+                guard let crop = cluster.bestCrop else { return nil }
                 return FaceSuggestion(
-                    id: faceID,
+                    id: cluster.id,
                     sampleCrop: crop,
-                    recentAssets: assets
+                    recentAssets: cluster.assets
                 )
             }
 

@@ -25,7 +25,7 @@ module Api
       # No birthday date is transmitted — the server just queues a birthday card.
       # Idempotent: no-ops if a birthday card is already queued for today.
       def birthday_signal
-        chapter = Chapter.where(status: %w[pending active])
+        chapter = Chapter.where(status: "active")
                          .for_user(current_user)
                          .find(params.require(:chapter_id))
 

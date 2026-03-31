@@ -27,6 +27,7 @@ gem "dotenv-rails"
 group :development, :test do
   gem "debug", platforms: %i[mri mswin]
   gem "rspec-rails", "~> 7.0"
+  gem "rspec_junit_formatter"
   gem "factory_bot_rails"
   gem "faker"
   gem "shoulda-matchers"

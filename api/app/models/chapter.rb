@@ -33,14 +33,10 @@ class Chapter < ApplicationRecord
     other = other_member(user)
     return Memory.none unless other
 
-    own_memories    = memories.where(owner: user)
-    their_setting   = memories.where(owner: other).pick(:visibility)
-
-    their_memories = case their_setting
-                     when "all"       then memories.where(owner: other)
-                     when "this_item" then memories.where(owner: other, visibility: "this_item")
-                     else                  Memory.none
-                     end
+    own_memories   = memories.where(owner: user)
+    # Filter per-memory — visibility is a per-item field, not a per-user policy.
+    # "all" and "this_item" are both visible to the chapter partner.
+    their_memories = memories.where(owner: other, visibility: %w[all this_item])
 
     Memory.where(id: own_memories).or(Memory.where(id: their_memories))
           .order(Arel.sql("COALESCE(taken_at, created_at) DESC"))

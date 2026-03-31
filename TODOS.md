@@ -47,3 +47,10 @@ Existing `face_index.json` in `Documents/` won't migrate to `Application Support
 `VoicePlayerView.stopPlayback()` doesn't call `AVAudioSession.sharedInstance().setActive(false)`.
 Low impact (playback category only, not record), but can interfere with other apps.
 **File:** `ios/MemoryTunnel/Views/SendFlow/VoiceFlowView.swift`
+
+### Face matching not validated in production — P2
+`FaceIndexService` uses Vision landmark vectors with L2 distance (threshold: 0.12) for identity clustering.
+Not tested on real-world diversity (lighting variation, glasses, masks, age range, skin tone).
+**Risk:** Smart Start suggests wrong people → erodes trust immediately at first-run.
+**Fix:** Before v1 launch, run a manual test on a device with real photos across varied conditions. Consider temporarily raising threshold to 0.15 and adding user-facing "wrong person?" correction in Smart Start picker.
+**File:** `ios/MemoryTunnel/Services/FaceIndexService.swift`

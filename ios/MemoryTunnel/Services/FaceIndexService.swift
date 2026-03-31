@@ -57,7 +57,7 @@ final class FaceIndexService {
     /// L2 distance threshold below which two landmark descriptors are treated as the same person.
     /// In face-relative normalized space: same person typically <0.10, different person >0.15.
     /// 0.12 is conservative — prefers false negatives (missed match) over false merges.
-    private let matchThreshold: Float = 0.12
+    private let matchThreshold: Float = FaceIndexService.clusterThreshold
 
     /// Minimum landmark points required for a usable descriptor.
     /// Vision returns exactly 76 for a well-detected frontal face.
@@ -130,6 +130,27 @@ final class FaceIndexService {
     func untaggedFaces() async -> [FaceRecord] {
         await store.untagged()
     }
+
+    /// Returns raw landmark descriptors and face crops without reading or writing FaceStore.
+    /// Use during bulk scanning (Smart Start) — caller does its own in-memory clustering
+    /// so no FaceRecords are created for strangers or transient faces.
+    func detectDescriptors(in image: UIImage) async -> [(descriptor: [Float], crop: UIImage?)] {
+        guard let cgImage = image.cgImage else { return [] }
+        let observations = await detectFacesWithLandmarks(in: cgImage)
+        guard !observations.isEmpty else { return [] }
+
+        var results: [(descriptor: [Float], crop: UIImage?)] = []
+        for observation in observations {
+            guard let descriptor = extractLandmarkDescriptor(from: observation) else { continue }
+            let crop = cropFace(from: cgImage, boundingBox: observation.boundingBox)
+            results.append((descriptor, crop))
+        }
+        return results
+    }
+
+    /// L2 distance threshold used for face identity matching.
+    /// Exposed so callers doing in-memory clustering use the same threshold as FaceStore matching.
+    static let clusterThreshold: Float = 0.12
 
     // MARK: - Face Detection
 
@@ -207,7 +228,7 @@ final class FaceIndexService {
         return best
     }
 
-    private func l2Distance(_ a: [Float], _ b: [Float]) -> Float {
+    nonisolated func l2Distance(_ a: [Float], _ b: [Float]) -> Float {
         var sumSq: Float = 0
         for i in 0 ..< a.count { sumSq += (a[i] - b[i]) * (a[i] - b[i]) }
         return sumSq.squareRoot()

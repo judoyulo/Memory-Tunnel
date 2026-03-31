@@ -1,0 +1,102 @@
+default_platform(:ios)
+
+# ──────────────────────────────────────────────
+# Constants
+# ──────────────────────────────────────────────
+
+SCHEME     = "MemoryTunnel"
+WORKSPACE  = "MemoryTunnel.xcworkspace"
+XCODEPROJ  = "MemoryTunnel.xcodeproj"
+BUNDLE_ID  = "com.memorytunnel.app"
+
+platform :ios do
+
+  # ── Beta: build and upload to TestFlight ──────
+  #
+  #   bundle exec fastlane beta
+  #
+  # Required env vars (set in GitHub Actions secrets or .env.local):
+  #   APPLE_ID           — your Apple ID email
+  #   APPLE_TEAM_ID      — 10-char Team ID from developer.apple.com
+  #   ITC_TEAM_ID        — App Store Connect numeric team ID
+  #   MATCH_GIT_URL      — private git repo storing certs (e.g. git@github.com:org/certs.git)
+  #   MATCH_PASSWORD     — encryption passphrase for match repo
+  #   ASC_KEY_ID         — App Store Connect API key ID
+  #   ASC_ISSUER_ID      — App Store Connect issuer ID
+  #   ASC_KEY_CONTENT    — Base64-encoded .p8 key file content
+  #
+  lane :beta do
+    # Increment build number from latest TestFlight build
+    latest_build = latest_testflight_build_number(
+      app_identifier: BUNDLE_ID
+    )
+    increment_build_number(
+      build_number: latest_build + 1,
+      xcodeproj:    XCODEPROJ
+    )
+
+    # Fetch Distribution certs + provisioning profiles via match
+    match(
+      type:                 "appstore",
+      app_identifier:       [BUNDLE_ID, "#{BUNDLE_ID}.widget"],
+      readonly:             is_ci,
+      git_url:              ENV["MATCH_GIT_URL"],
+      password:             ENV["MATCH_PASSWORD"]
+    )
+
+    # Build
+    gym(
+      scheme:              SCHEME,
+      export_method:       "app-store",
+      xcargs:              "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}",
+      output_directory:    "build",
+      output_name:         "MemoryTunnel.ipa",
+      clean:               true
+    )
+
+    # Upload to TestFlight
+    api_key = app_store_connect_api_key(
+      key_id:        ENV["ASC_KEY_ID"],
+      issuer_id:     ENV["ASC_ISSUER_ID"],
+      key_content:   Base64.decode64(ENV["ASC_KEY_CONTENT"])
+    )
+
+    pilot(
+      api_key:                    api_key,
+      ipa:                        "build/MemoryTunnel.ipa",
+      skip_waiting_for_build_processing: true,
+      changelog:                  File.exist?("../CHANGELOG.md") ? File.read("../CHANGELOG.md").lines.first(30).join : "New build"
+    )
+
+    UI.success "Uploaded to TestFlight. Build #{latest_build + 1}."
+  end
+
+  # ── Release: submit for App Store review ──────
+  #
+  #   bundle exec fastlane release
+  #
+  lane :release do
+    beta  # build + upload first
+
+    deliver(
+      app_identifier:     BUNDLE_ID,
+      submit_for_review:  true,
+      automatic_release:  false,
+      force:              true,
+      skip_screenshots:   true,
+      skip_metadata:      false
+    )
+
+    UI.success "Submitted for App Store review."
+  end
+
+  # ── Screenshots: generate for all device sizes ─
+  lane :screenshots do
+    snapshot(
+      scheme:         "#{SCHEME}UITests",
+      output_directory: "fastlane/screenshots"
+    )
+    frameit(white: true)
+  end
+
+end
