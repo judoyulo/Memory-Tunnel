@@ -35,6 +35,17 @@ end
 RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
 
+  # Stub Twilio so tests never send real SMS (burns the trial daily limit).
+  config.before(:each) do
+    twilio_client = instance_double(Twilio::REST::Client)
+    twilio_messages = instance_double(Twilio::REST::Api::V2010::AccountContext::MessageList)
+    allow(Twilio::REST::Client).to receive(:new).and_return(twilio_client)
+    allow(twilio_client).to receive(:messages).and_return(twilio_messages)
+    allow(twilio_messages).to receive(:create).and_return(
+      OpenStruct.new(sid: "SM_test_#{SecureRandom.hex(8)}", status: "queued")
+    )
+  end
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')
