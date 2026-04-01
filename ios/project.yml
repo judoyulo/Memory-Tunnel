@@ -13,7 +13,7 @@ settings:
     SWIFT_VERSION: "5.10"
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
-    DEVELOPMENT_TEAM: ""  # Set to your Team ID before archiving
+    DEVELOPMENT_TEAM: ""  # Set in Xcode Signing & Capabilities per target
 
 targets:
   MemoryTunnel:
@@ -35,75 +35,33 @@ targets:
       configs:
         Debug:
           OTHER_SWIFT_FLAGS: "-DDEBUG"
-          # API_BASE_URL: override here or in a .xcconfig file for your dev server
-          # e.g. API_BASE_URL: "http://192.168.1.244:3000"
-          # Release builds use the default empty string; set to your prod URL before archiving.
+          API_BASE_URL: "http://192.168.1.244:3000"
     entitlements:
       path: MemoryTunnel/MemoryTunnel.entitlements
       properties:
         com.apple.security.application-groups:
           - group.com.memorytunnel.app
     dependencies:
-      - framework: Vision.framework
-        weak: false
-      - framework: UserNotifications.framework
-        weak: false
-    info:
-      path: MemoryTunnel/Info.plist
-      properties:
-        CFBundleName: $(PRODUCT_NAME)
-        CFBundleDisplayName: Memory Tunnel
-        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundlePackageType: APPL
-        UILaunchScreen:
-          UIColorName: "LaunchBackground"
-          UIImageName: ""
-        UISupportedInterfaceOrientations:
-          - UIInterfaceOrientationPortrait
-        UIApplicationSceneManifest:
-          UIApplicationSupportsMultipleScenes: false
-        NSPhotoLibraryUsageDescription: "Memory Tunnel needs access to your photos to send memories."
-        NSCameraUsageDescription: "Memory Tunnel uses your camera to capture memories."
-        NSContactsUsageDescription: "Memory Tunnel reads your contacts to detect birthdays."
-        API_BASE_URL: "$(API_BASE_URL)"
-        NSAppTransportSecurity:
-          # NSAllowsLocalNetworking permits LAN connections (192.168.x.x, .local)
-          # without disabling ATS globally. Set API_BASE_URL to your dev server in
-          # the Debug build setting above. Production builds should use https:// — no ATS exception needed.
-          NSAllowsLocalNetworking: true
+      - sdk: Vision.framework
+      - sdk: UserNotifications.framework
 
-  MemoryTunnelWidget:
-    type: app-extension
-    platform: iOS
-    deploymentTarget: "17.0"
-    sources:
-      - path: MemoryTunnelWidget
-        excludes:
-          - "**/.DS_Store"
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.memorytunnel.app.widget
-        INFOPLIST_FILE: MemoryTunnelWidget/Info.plist
-        CODE_SIGN_STYLE: Automatic
-    entitlements:
-      path: MemoryTunnelWidget/MemoryTunnelWidget.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.com.memorytunnel.app
-    dependencies:
-      - framework: WidgetKit.framework
-        weak: false
-      - framework: SwiftUI.framework
-        weak: false
-    info:
-      path: MemoryTunnelWidget/Info.plist
-      properties:
-        CFBundleName: $(PRODUCT_NAME)
-        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundlePackageType: XPC!
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+  # MemoryTunnelWidget: temporarily disabled to unblock local builds
+  # Re-enable before App Store submission.
+  # MemoryTunnelWidget:
+  #   type: app-extension
+  #   platform: iOS
+  #   deploymentTarget: "17.0"
+  #   sources:
+  #     - path: MemoryTunnelWidget
+  #   settings:
+  #     base:
+  #       PRODUCT_BUNDLE_IDENTIFIER: com.memorytunnel.app.widget
+  #       CODE_SIGN_STYLE: Automatic
+  #   entitlements:
+  #     path: MemoryTunnelWidget/MemoryTunnelWidget.entitlements
+  #     properties:
+  #       com.apple.security.application-groups:
+  #         - group.com.memorytunnel.app
+  #   dependencies:
+  #     - framework: WidgetKit.framework
+  #     - framework: SwiftUI.framework

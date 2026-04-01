@@ -10,15 +10,16 @@ Rails.application.routes.draw do
       # Auth
       post "auth/send_otp"    # POST { phone } → sends SMS OTP
       post "auth/verify_otp"  # POST { phone, code } → returns JWT
+      post "auth/dev_login"   # POST { code: "8888" } → fresh user, dev only
 
       # Current user
       get   "me", to: "me#show"   # GET → current user profile
       patch "me", to: "me#update" # PATCH → update display_name / push_token
 
       # Chapters
-      resources :chapters, only: %i[index show create] do
+      resources :chapters, only: %i[index show create destroy] do
         # Memories within a chapter
-        resources :memories, only: %i[index create destroy] do
+        resources :memories, only: %i[index create update destroy] do
           # Presigned URL for direct S3 upload
           post "presign", on: :collection
           # Refresh a signed media URL before it expires (TTL 1hr; call at ~50min)
@@ -32,6 +33,9 @@ Rails.application.routes.draw do
       resources :invitations, only: %i[create] do
         post "accept", on: :member
       end
+
+      # Invitation preview (unauthenticated — for invited users before signup)
+      get "invitation_previews/:token", to: "invitation_previews#show"
 
       # Daily card queue
       get  "daily_card",                    to: "daily_card#show"

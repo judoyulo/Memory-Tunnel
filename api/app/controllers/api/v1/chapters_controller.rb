@@ -1,7 +1,7 @@
 module Api
   module V1
     class ChaptersController < ApplicationController
-      before_action :set_chapter, only: %i[show visibility]
+      before_action :set_chapter, only: %i[show destroy visibility]
 
       # GET /api/v1/chapters
       def index
@@ -33,6 +33,24 @@ module Api
       # GET /api/v1/chapters/:id
       def show
         render json: chapter_json(@chapter)
+      end
+
+      # DELETE /api/v1/chapters/:id
+      # Only the creator (member_a) can delete. Active chapters with a partner require
+      # both members to leave (not implemented in v1 — only pending chapters are deletable).
+      def destroy
+        unless @chapter.member_a_id == current_user.id
+          return render json: { error: "Only the chapter creator can delete it" }, status: :forbidden
+        end
+
+        if @chapter.status == "active" && @chapter.member_b_id.present?
+          return render json: { error: "Cannot delete an active chapter with a partner" }, status: :unprocessable_entity
+        end
+
+        # Delete invitations first (they reference preview_memory which references this chapter)
+        @chapter.invitations.destroy_all
+        @chapter.destroy!
+        head :no_content
       end
 
       # PATCH /api/v1/chapters/:id/visibility

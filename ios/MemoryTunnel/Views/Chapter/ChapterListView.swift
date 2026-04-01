@@ -13,11 +13,18 @@ final class ChapterListViewModel: ObservableObject {
             chapters = try await APIClient.shared.chapters()
             let active = chapters.filter { $0.status == "active" }
             if !active.isEmpty {
-                // Request Contacts access after first active chapter (DESIGN.md permission timing).
-                // No-ops if already authorized or denied.
                 await BirthdayService.shared.requestAccessIfNeeded(for: active)
                 await BirthdayService.shared.checkAndSignal(chapters: active)
             }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func deleteChapter(_ chapter: Chapter) async {
+        do {
+            try await APIClient.shared.deleteChapter(id: chapter.id)
+            chapters.removeAll { $0.id == chapter.id }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -28,6 +35,7 @@ struct ChapterListView: View {
     @StateObject private var vm = ChapterListViewModel()
     @EnvironmentObject var router: NotificationRouter
     @State private var showInviteFlow = false
+    @State private var showFaceScan = false
 
     var body: some View {
         NavigationStack {
@@ -50,30 +58,40 @@ struct ChapterListView: View {
                 } else if vm.chapters.isEmpty {
                     ChapterListEmptyView(onInvite: { showInviteFlow = true })
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: Spacing.sm) {
-                            ForEach(vm.chapters) { chapter in
-                                if chapter.status == "pending" {
-                                    // Pending chapters have no partner yet — not navigable
-                                    ChapterTileView(chapter: chapter)
-                                } else {
-                                    NavigationLink(value: chapter) {
-                                        ChapterTileView(chapter: chapter)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
+                    List {
+                        ForEach(vm.chapters) { chapter in
+                            NavigationLink(value: chapter) {
+                                ChapterTileView(chapter: chapter)
+                            }
+                            .listRowBackground(Color.mtBackground)
+                            .listRowSeparator(.hidden)
+                        }
+                        .onDelete { indexSet in
+                            for index in indexSet {
+                                let chapter = vm.chapters[index]
+                                Task { await vm.deleteChapter(chapter) }
                             }
                         }
-                        .padding(Spacing.md)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
             }
             .navigationTitle("Chapters")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showInviteFlow = true
+                    Menu {
+                        Button {
+                            showInviteFlow = true
+                        } label: {
+                            Label("Create chapter", systemImage: "person.badge.plus")
+                        }
+                        Button {
+                            showFaceScan = true
+                        } label: {
+                            Label("Find people in photos", systemImage: "person.viewfinder")
+                        }
                     } label: {
                         Image(systemName: "plus")
                             .foregroundStyle(Color.mtLabel)
@@ -86,6 +104,9 @@ struct ChapterListView: View {
             .sheet(isPresented: $showInviteFlow) {
                 InviteFlowView()
                     .onDisappear { Task { await vm.load() } }
+            }
+            .sheet(isPresented: $showFaceScan) {
+                FaceScanSheet { showFaceScan = false; Task { await vm.load() } }
             }
             .task { await vm.load() }
             .refreshable { await vm.load() }

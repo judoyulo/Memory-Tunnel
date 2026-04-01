@@ -150,7 +150,7 @@ final class FaceIndexService {
 
     /// L2 distance threshold used for face identity matching.
     /// Exposed so callers doing in-memory clustering use the same threshold as FaceStore matching.
-    static let clusterThreshold: Float = 0.12
+    nonisolated static let clusterThreshold: Float = 0.12
 
     // MARK: - Face Detection
 

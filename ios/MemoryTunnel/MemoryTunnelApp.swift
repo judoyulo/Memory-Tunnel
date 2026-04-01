@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(BranchSDK)
 import BranchSDK
+#endif
 
 @main
 struct MemoryTunnelApp: App {
@@ -15,6 +17,8 @@ struct MemoryTunnelApp: App {
                 Group {
                     if appState.isAuthenticated {
                         ContentView()
+                    } else if DeepLinkStore.shared.pendingInvitationToken != nil {
+                        InvitedLandingView()
                     } else {
                         OnboardingView()
                     }
@@ -31,9 +35,9 @@ struct MemoryTunnelApp: App {
             .animation(.mtFade, value: showSplash)
             .preferredColorScheme(.light)   // Design system: light only (cream bg)
             .onOpenURL { url in
-                // Branch.io Universal Link / URI scheme handler
+                #if canImport(BranchSDK)
                 Branch.getInstance().handleDeepLink(url)
-                // Widget taps use memorytunnel:// scheme — route to NotificationRouter
+                #endif
                 NotificationRouter.shared.route(url: url)
             }
         }
@@ -45,15 +49,15 @@ struct MemoryTunnelApp: App {
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        #if canImport(BranchSDK)
         // Branch.io deferred deep link — preserves invitation token through App Store install
         Branch.getInstance().initSession(launchOptions: launchOptions) { params, error in
             guard let params = params as? [String: AnyObject], error == nil else { return }
-
-            // Branch passes the invitation_token embedded in the web preview page
             if let token = params["invitation_token"] as? String {
                 DeepLinkStore.shared.pendingInvitationToken = token
             }
         }
+        #endif
         return true
     }
 
@@ -61,7 +65,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      continue userActivity: NSUserActivity,
                      restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        #if canImport(BranchSDK)
         Branch.getInstance().continue(userActivity)
+        #endif
         return true
     }
 
@@ -94,6 +100,7 @@ final class AppState: ObservableObject {
     @Published var currentUser: User?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var hasChapters = false
 
     var isAuthenticated: Bool { currentUser != nil && TokenStore.shared.isAuthenticated }
 
@@ -109,6 +116,10 @@ final class AppState: ObservableObject {
         defer { isLoading = false }
         do {
             currentUser = try await APIClient.shared.me()
+            // Check if user has chapters (for Today tab empty state)
+            if let chapters = try? await APIClient.shared.chapters() {
+                hasChapters = !chapters.isEmpty
+            }
         } catch {
             // Token expired or revoked — force re-auth
             TokenStore.shared.token = nil

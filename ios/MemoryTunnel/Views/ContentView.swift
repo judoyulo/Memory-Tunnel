@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// Root navigation for authenticated users.
-/// The home screen is always the Daily Card queue — one card per day.
+/// Default tab is Chapters for new users (no chapters yet), Today for established users.
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var router: NotificationRouter
-    @State private var selectedTab: Tab = .home
+    @State private var selectedTab: Tab = .chapters
 
     enum Tab { case home, chapters }
 
@@ -20,6 +20,10 @@ struct ContentView: View {
                 .tag(Tab.chapters)
         }
         .tint(Color.mtLabel)
+        .onAppear {
+            // Default to Chapters for new users, Today for users with chapters
+            selectedTab = appState.hasChapters ? .home : .chapters
+        }
         .onChange(of: router.pendingChapterID) { _, chapterID in
             if chapterID != nil { selectedTab = .chapters }
         }

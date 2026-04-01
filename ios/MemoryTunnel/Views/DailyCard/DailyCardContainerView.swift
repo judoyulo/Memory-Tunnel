@@ -32,7 +32,7 @@ final class DailyCardViewModel: ObservableObject {
 
         if let card {
             defaults.set(card.chapter.partner?.displayName, forKey: "widget.partnerName")
-            defaults.set(card.memories.first?.mediaURL.absoluteString, forKey: "widget.imageURL")
+            defaults.set(card.memories.first?.mediaURL?.absoluteString, forKey: "widget.imageURL")
             defaults.set(card.chapter.id, forKey: "widget.chapterID")
         } else {
             // No card today — clear widget data so it shows the calm empty state
@@ -48,6 +48,7 @@ final class DailyCardViewModel: ObservableObject {
 
 struct DailyCardContainerView: View {
     @StateObject private var vm = DailyCardViewModel()
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
         ZStack {
@@ -75,11 +76,42 @@ struct DailyCardContainerView: View {
                             removal: .opacity.animation(.mtFade)
                         )
                     )
+            } else if !appState.hasChapters {
+                // New user with no chapters: guide them to create one
+                TodayNewUserView()
             } else {
                 DailyCardEmptyView()
             }
         }
         .task { await vm.load() }
+    }
+}
+
+// MARK: - Smart Today: New User State
+
+struct TodayNewUserView: View {
+    var body: some View {
+        VStack(spacing: Spacing.lg) {
+            Spacer()
+            Image(systemName: "heart.text.square.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.mtTertiary)
+            Text("Your daily memories\nwill appear here")
+                .font(.mtEmptyTitle)
+                .foregroundStyle(Color.mtLabel)
+                .multilineTextAlignment(.center)
+            Text("Start by creating a chapter with\nsomeone you want to stay close to.")
+                .font(.mtBody)
+                .foregroundStyle(Color.mtSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+            Text("Tap the Chapters tab to begin.")
+                .font(.mtCaption)
+                .foregroundStyle(Color.mtTertiary)
+            Spacer()
+            Spacer()
+        }
+        .padding(Spacing.xl)
     }
 }
 

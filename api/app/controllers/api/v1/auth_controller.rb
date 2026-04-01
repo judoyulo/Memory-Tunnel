@@ -73,6 +73,25 @@ module Api
         render json: { error: "Phone number not found" }, status: :not_found
       end
 
+      # POST /api/v1/auth/dev_login
+      # Body: { code: "8888" }
+      # Development only. Creates a fresh user and returns a JWT. For quick testing.
+      def dev_login
+        unless Rails.env.local?
+          return render json: { error: "Not available in production" }, status: :forbidden
+        end
+
+        unless params[:code] == "8888"
+          return render json: { error: "Invalid developer code" }, status: :unprocessable_entity
+        end
+
+        phone = "+1555#{SecureRandom.random_number(10_000_000).to_s.rjust(7, '0')}"
+        user = User.create!(phone: phone, display_name: "User")
+        jwt = issue_jwt(user)
+
+        render json: { token: jwt, user: user_json(user), chapter: nil }, status: :ok
+      end
+
       private
 
       def user_json(user)

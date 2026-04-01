@@ -31,11 +31,15 @@ class Chapter < ApplicationRecord
   # plus only the memories from the other member that match their current visibility setting.
   def memories_visible_to(user)
     other = other_member(user)
-    return Memory.none unless other
 
-    own_memories   = memories.where(owner: user)
-    # Filter per-memory — visibility is a per-item field, not a per-user policy.
-    # "all" and "this_item" are both visible to the chapter partner.
+    own_memories = memories.where(owner: user)
+
+    # Pending chapters (no partner yet): show only the creator's own memories.
+    unless other
+      return own_memories.order(Arel.sql("COALESCE(taken_at, created_at) DESC"))
+    end
+
+    # Active chapters: show user's own + partner's memories with visible visibility.
     their_memories = memories.where(owner: other, visibility: %w[all this_item])
 
     Memory.where(id: own_memories).or(Memory.where(id: their_memories))

@@ -124,19 +124,27 @@ struct FaceTaggingOverlay: ViewModifier {
     func body(content: Content) -> some View {
         content
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if let face = currentFace {
+                // Only show face tagging for active chapters with a partner.
+                // Suppress for pending chapters (no partner to tag) and for the
+                // chapter creator's own photos (redundant — they picked those photos).
+                if let face = currentFace, chapter.status == "active", chapter.partner != nil {
                     FaceTaggingBanner(
                         face:        face,
                         partnerName: chapter.partner?.displayName ?? "them",
                         onConfirm: {
                             guard let partnerID = chapter.partner?.id else { return }
-                            try? await FaceIndexService.shared.tag(
-                                faceID:    face.id,
-                                as:        partnerID,
-                                in:        chapter.id
-                            )
-                            // Remove from queue immediately on confirm
-                            queue.removeAll { $0.id == face.id }
+                            do {
+                                try await FaceIndexService.shared.tag(
+                                    faceID:    face.id,
+                                    as:        partnerID,
+                                    in:        chapter.id
+                                )
+                                queue.removeAll { $0.id == face.id }
+                            } catch {
+                                // Tag failed — skip this face for the session instead of silently eating the error
+                                print("[FaceTagging] tag failed: \(error)")
+                                sessionSkipped.insert(face.id)
+                            }
                         },
                         onSkip: {
                             sessionSkipped.insert(face.id)
@@ -147,6 +155,8 @@ struct FaceTaggingOverlay: ViewModifier {
                 }
             }
             .task {
+                // Only load untagged faces for active chapters with partners
+                guard chapter.status == "active", chapter.partner != nil else { return }
                 queue = await FaceIndexService.shared.untaggedFaces()
             }
     }

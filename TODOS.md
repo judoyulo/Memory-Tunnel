@@ -61,9 +61,13 @@ Code is complete (`ApnsService`, push jobs, iOS push registration all wired).
 Boot check initializer (`apns_check.rb`) logs a warning if these are missing.
 **Why:** Without these, push notifications silently no-op.
 
-### Face matching not validated in production — P2
-`FaceIndexService` uses Vision landmark vectors with L2 distance (threshold: 0.12) for identity clustering.
-Not tested on real-world diversity (lighting variation, glasses, masks, age range, skin tone).
-**Risk:** Smart Start suggests wrong people → erodes trust immediately at first-run.
-**Fix:** Before v1 launch, run a manual test on a device with real photos across varied conditions. Consider temporarily raising threshold to 0.15 and adding user-facing "wrong person?" correction in Smart Start picker.
+### Replace Vision landmarks with Core ML face embeddings — P1
+Vision landmark descriptors (76 x/y points = 152 floats) are fundamentally wrong for face identity.
+They compare face geometry, not identity. Same person at different angles gets split. Different people
+with similar bone structure get merged. CEO test confirmed: only 3 duplicate faces found.
+**Fix:** Integrate MobileFaceNet (or ArcFace) via Core ML (~5MB model). Produces 128-dim identity
+vectors that survive lighting/angle/expression changes. Replace `extractLandmarkDescriptor` with
+`generateEmbedding` in FaceIndexService. Update L2 threshold for the new embedding space.
+Keep everything on-device. No biometric data leaves the phone.
+**Effort:** S (human: ~1 week / CC: ~30 min)
 **File:** `ios/MemoryTunnel/Services/FaceIndexService.swift`

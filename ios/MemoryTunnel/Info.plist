@@ -29,6 +29,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Memory Tunnel uses your camera to capture memories.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Memory Tunnel uses your microphone to record voice clips for your chapters.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Memory Tunnel reads your contacts to detect birthdays.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

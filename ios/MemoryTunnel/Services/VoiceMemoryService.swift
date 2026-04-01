@@ -27,7 +27,14 @@ final class VoiceMemoryService: NSObject, ObservableObject {
     // MARK: - Recording lifecycle
 
     func startRecording() throws {
+        // Request microphone permission if not already granted
         let session = AVAudioSession.sharedInstance()
+        if session.recordPermission == .undetermined {
+            session.requestRecordPermission { _ in }
+            return // Will start on next tap after permission granted
+        }
+        guard session.recordPermission == .granted else { return }
+
         try session.setCategory(.record, mode: .default, options: [])
         try session.setActive(true)
 

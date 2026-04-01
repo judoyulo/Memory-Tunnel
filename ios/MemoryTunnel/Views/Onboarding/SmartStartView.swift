@@ -219,7 +219,9 @@ struct SmartStartView: View {
             if hasRun { onComplete(); return }
 
             Task {
-                if let chapters = try? await APIClient.shared.chapters(), !chapters.isEmpty {
+                if let chapters = try? await APIClient.shared.chapters(),
+                   chapters.contains(where: { $0.lastMemoryAt != nil }) {
+                    // Only skip if user has chapters with actual memories, not empty orphans
                     UserDefaults.standard.set(true, forKey: "smartStartCompleted")
                     onComplete()
                 }
@@ -558,91 +560,7 @@ struct SmartStartPhotoPicker: View {
         }
     }
 
-    private func loadFullImage(for asset: PHAsset) async -> UIImage? {
-        await withCheckedContinuation { continuation in
-            let options = PHImageRequestOptions()
-            options.deliveryMode = .highQualityFormat
-            options.isNetworkAccessAllowed = false
-            options.isSynchronous = false
-
-            PHImageManager.default().requestImage(
-                for: asset,
-                targetSize: CGSize(width: 1200, height: 1200),
-                contentMode: .aspectFit,
-                options: options
-            ) { image, info in
-                // iCloud-only assets with isNetworkAccessAllowed=false fire once with
-                // isDegraded=true and never again — resume with nil to prevent hang.
-                let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
-                if isInCloud {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !isDegraded {
-                    continuation.resume(returning: image)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - PHAsset Thumbnail
-
-private struct PHAssetThumbnailView: View {
-    let asset: PHAsset
-    let onCloudDetected: (() -> Void)?
-    @State private var thumbnail: UIImage?
-
-    init(asset: PHAsset, onCloudDetected: (() -> Void)? = nil) {
-        self.asset = asset
-        self.onCloudDetected = onCloudDetected
-    }
-
-    var body: some View {
-        ZStack {
-            Color.mtSurface
-            if let img = thumbnail {
-                Image(uiImage: img)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image(systemName: "photo")
-                    .foregroundStyle(Color.mtSecondary.opacity(0.4))
-            }
-        }
-        .clipped()
-        .task { await loadThumbnail() }
-    }
-
-    private func loadThumbnail() async {
-        let size = CGSize(width: 200, height: 200)
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .fastFormat
-        options.resizeMode = .fast
-        options.isSynchronous = false
-
-        let result: UIImage? = await withCheckedContinuation { continuation in
-            PHImageManager.default().requestImage(
-                for: asset,
-                targetSize: size,
-                contentMode: .aspectFill,
-                options: options
-            ) { image, info in
-                let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
-                if isInCloud {
-                    Task { @MainActor in onCloudDetected?() }
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !isDegraded {
-                    continuation.resume(returning: image)
-                }
-            }
-        }
-        thumbnail = result
-    }
+    // loadFullImage and PHAssetThumbnailView moved to Views/Components/PHAssetThumbnailView.swift
 }
 
 // MARK: - Screen E: Caption

@@ -29,20 +29,28 @@ module Api
       # Body: { s3_key:, caption:, taken_at:, visibility: }
       # Called after the client has confirmed the S3 upload succeeded.
       def create
-        # Validate s3_key is scoped to this chapter's prefix — prevents a user from
-        # claiming ownership of another user's S3 object by supplying an arbitrary key.
-        key = params.require(:s3_key).to_s
-        unless key.start_with?("memories/#{@chapter.id}/") && !key.include?("..")
-          return render json: { error: "invalid s3_key" }, status: :unprocessable_entity
+        media_type = params.fetch(:media_type, "photo")
+
+        # Text and location_checkin memories don't need S3
+        if %w[text location_checkin].include?(media_type)
+          key = nil
+        else
+          key = params.require(:s3_key).to_s
+          unless key.start_with?("memories/#{@chapter.id}/") && !key.include?("..")
+            return render json: { error: "invalid s3_key" }, status: :unprocessable_entity
+          end
         end
 
         memory = @chapter.memories.create!(
-          owner:      current_user,
-          s3_key:     key,
-          caption:    params[:caption],
-          taken_at:   params[:taken_at],
-          visibility: params.fetch(:visibility, "this_item"),
-          media_type: params.fetch(:media_type, "photo")
+          owner:         current_user,
+          s3_key:        key,
+          caption:       params[:caption],
+          taken_at:      params[:taken_at],
+          visibility:    params.fetch(:visibility, "this_item"),
+          media_type:    params.fetch(:media_type, "photo"),
+          location_name: params[:location_name],
+          latitude:      params[:latitude],
+          longitude:     params[:longitude]
         )
 
         @chapter.touch_last_memory!
@@ -52,6 +60,24 @@ module Api
         NotifyNewMemoryJob.perform_later(memory_id: memory.id, recipient_id: partner.id) if partner
 
         render json: memory_json(memory), status: :created
+      end
+
+      # PATCH /api/v1/chapters/:chapter_id/memories/:id
+      # Body: { caption:, location_name:, taken_at: }
+      def update
+        memory = @chapter.memories.find(params[:id])
+
+        unless memory.owner_id == current_user.id
+          return render json: { error: "forbidden" }, status: :forbidden
+        end
+
+        memory.update!(
+          caption:       params.key?(:caption) ? params[:caption] : memory.caption,
+          location_name: params.key?(:location_name) ? params[:location_name] : memory.location_name,
+          taken_at:      params.key?(:taken_at) ? params[:taken_at] : memory.taken_at
+        )
+
+        render json: memory_json(memory), status: :ok
       end
 
       # GET /api/v1/chapters/:chapter_id/memories/:id/refresh_url
@@ -86,12 +112,15 @@ module Api
           id:          memory.id,
           chapter_id:  memory.chapter_id,
           owner_id:    memory.owner_id,
-          media_url:   memory.signed_url,
+          media_url:   memory.s3_key.present? ? memory.signed_url : nil,
           media_type:  memory.media_type,
           caption:     memory.caption,
           taken_at:    memory.taken_at,
           visibility:  memory.visibility,
-          created_at:  memory.created_at
+          location_name: memory.location_name,
+          latitude:      memory.latitude,
+          longitude:     memory.longitude,
+          created_at:    memory.created_at
         }
       end
     end

@@ -53,25 +53,47 @@ struct Memory: Codable, Identifiable {
     let id: String
     let chapterID: String
     let ownerID: String
-    var mediaURL: URL
-    var mediaType: String        // "photo" | "voice"
+    var mediaURL: URL?             // nil for text and location_checkin memories
+    var mediaType: String          // "photo" | "voice" | "text" | "location_checkin"
     var caption: String?
     var takenAt: Date?
     var visibility: String
+    var locationName: String?
+    var latitude: Double?
+    var longitude: Double?
     let createdAt: Date
 
     var isVoice: Bool { mediaType == "voice" }
 
     enum CodingKeys: String, CodingKey {
         case id
-        case chapterID  = "chapter_id"
-        case ownerID    = "owner_id"
-        case mediaURL   = "media_url"
-        case mediaType  = "media_type"
+        case chapterID    = "chapter_id"
+        case ownerID      = "owner_id"
+        case mediaURL     = "media_url"
+        case mediaType    = "media_type"
         case caption
-        case takenAt    = "taken_at"
+        case takenAt      = "taken_at"
         case visibility
-        case createdAt  = "created_at"
+        case locationName = "location_name"
+        case latitude
+        case longitude
+        case createdAt    = "created_at"
+    }
+}
+
+// MARK: - Invitation Preview (unauthenticated)
+
+struct InvitationPreview: Codable {
+    let inviterName: String
+    let chapterName: String?
+    let previewImageURL: URL?
+    let invitationID: String
+
+    enum CodingKeys: String, CodingKey {
+        case inviterName    = "inviter_name"
+        case chapterName    = "chapter_name"
+        case previewImageURL = "preview_image_url"
+        case invitationID   = "invitation_id"
     }
 }
 

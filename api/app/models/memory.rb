@@ -3,10 +3,10 @@ class Memory < ApplicationRecord
   belongs_to :owner, class_name: "User"
 
   enum :visibility,  { this_item: "this_item", all: "all" },    scopes: false
-  enum :media_type,  { photo: "photo", voice: "voice" },        scopes: false
+  enum :media_type,  { photo: "photo", voice: "voice", text: "text", location_checkin: "location_checkin" }, scopes: false
 
   validates :chapter, :owner, presence: true
-  validates :s3_key,          presence: true
+  validates :s3_key,          presence: true, unless: -> { text? || location_checkin? }
   validates :visibility,      presence: true
   validates :media_type,      presence: true
 

@@ -65,6 +65,12 @@ actor APIClient {
         return response
     }
 
+    func devLogin(code: String) async throws -> OTPVerifyResponse {
+        let response: OTPVerifyResponse = try await post("/api/v1/auth/dev_login", body: ["code": code], authenticated: false)
+        token = response.token
+        return response
+    }
+
     // MARK: Me
 
     func me() async throws -> User {
@@ -84,6 +90,10 @@ actor APIClient {
         try await get("/api/v1/chapters")
     }
 
+    func deleteChapter(id: String) async throws {
+        try await delete("/api/v1/chapters/\(id)")
+    }
+
     func createChapter(name: String?) async throws -> Chapter {
         var body: [String: String] = [:]
         if let n = name { body["name"] = n }
@@ -101,7 +111,7 @@ actor APIClient {
     // MARK: Memories
 
     func memories(chapterID: String, page: Int = 1) async throws -> [Memory] {
-        try await get("/api/v1/chapters/\(chapterID)/memories?page=\(page)")
+        try await get("/api/v1/chapters/\(chapterID)/memories", queryItems: [URLQueryItem(name: "page", value: "\(page)")])
     }
 
     func presign(chapterID: String, contentType: String = "image/jpeg") async throws -> PresignResponse {
@@ -110,14 +120,45 @@ actor APIClient {
     }
 
     func createMemory(chapterID: String, s3Key: String, caption: String?, takenAt: Date?,
-                      visibility: String, mediaType: String = "photo") async throws -> Memory {
+                      visibility: String, mediaType: String = "photo",
+                      locationName: String? = nil, latitude: Double? = nil, longitude: Double? = nil) async throws -> Memory {
         var body: [String: String] = ["s3_key": s3Key, "visibility": visibility, "media_type": mediaType]
         if let c = caption { body["caption"] = c }
         if let t = takenAt {
             let iso = ISO8601DateFormatter()
             body["taken_at"] = iso.string(from: t)
         }
+        if let l = locationName { body["location_name"] = l }
+        if let lat = latitude   { body["latitude"] = String(lat) }
+        if let lon = longitude  { body["longitude"] = String(lon) }
         return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
+    }
+
+    // MARK: Invitation Preview (unauthenticated)
+
+    func fetchInvitationPreview(token: String) async throws -> InvitationPreview {
+        try await get("/api/v1/invitation_previews/\(token)", authenticated: false)
+    }
+
+    func createTextMemory(chapterID: String, caption: String, locationName: String? = nil) async throws -> Memory {
+        var body: [String: String] = ["media_type": "text", "caption": caption, "visibility": "this_item"]
+        if let l = locationName { body["location_name"] = l }
+        return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
+    }
+
+    func createLocationCheckin(chapterID: String, locationName: String, latitude: Double, longitude: Double, caption: String? = nil) async throws -> Memory {
+        var body: [String: String] = [
+            "media_type": "location_checkin", "visibility": "this_item",
+            "location_name": locationName, "latitude": String(latitude), "longitude": String(longitude)
+        ]
+        if let c = caption { body["caption"] = c }
+        return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
+    }
+
+    func updateMemory(chapterID: String, memoryID: String, caption: String?) async throws -> Memory {
+        var body: [String: String] = [:]
+        if let c = caption { body["caption"] = c }
+        return try await patch("/api/v1/chapters/\(chapterID)/memories/\(memoryID)", body: body)
     }
 
     func deleteMemory(chapterID: String, memoryID: String) async throws {
@@ -180,8 +221,8 @@ actor APIClient {
     // MARK: - HTTP primitives
 
     @discardableResult
-    private func get<T: Decodable>(_ path: String) async throws -> T {
-        let req = try buildRequest(method: "GET", path: path)
+    private func get<T: Decodable>(_ path: String, authenticated: Bool = true, queryItems: [URLQueryItem]? = nil) async throws -> T {
+        let req = try buildRequest(method: "GET", path: path, authenticated: authenticated, queryItems: queryItems)
         return try await perform(req)
     }
 
@@ -228,8 +269,10 @@ actor APIClient {
         try await performVoid(req)
     }
 
-    private func buildRequest(method: String, path: String, authenticated: Bool = true) throws -> URLRequest {
-        let url = baseURL.appending(path: path)
+    private func buildRequest(method: String, path: String, authenticated: Bool = true, queryItems: [URLQueryItem]? = nil) throws -> URLRequest {
+        var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
+        if let items = queryItems { components.queryItems = items }
+        guard let url = components.url else { throw APIError.httpError(0, "invalid URL") }
         var req = URLRequest(url: url)
         req.httpMethod = method
         if authenticated {
