@@ -69,15 +69,27 @@ module Api
         chapter = entry.chapter
         partner = chapter.other_member(current_user)
 
-        # Return a few recent shared memories for the card UI to display
+        # Return a few recent shared memories for the card UI to display.
+        # Must match the full memory_json shape from MemoriesController so the iOS
+        # Memory model can decode it (all non-optional fields must be present).
         memories = chapter.memories_visible_to(current_user).limit(6).map do |m|
           {
-            id:         m.id,
-            media_url:  m.signed_url,
-            media_type: m.media_type,
-            caption:    m.caption,
-            taken_at:   m.taken_at,
-            owner_id:   m.owner_id
+            id:            m.id,
+            chapter_id:    m.chapter_id,
+            owner_id:      m.owner_id,
+            media_url:     m.s3_key.present? ? m.signed_url : nil,
+            media_type:    m.media_type,
+            caption:       m.caption,
+            taken_at:      m.taken_at,
+            event_date:    m.event_date,
+            emotion_tags:  m.emotion_tags,
+            width:         m.width,
+            height:        m.height,
+            visibility:    m.visibility,
+            location_name: m.location_name,
+            latitude:      m.latitude,
+            longitude:     m.longitude,
+            created_at:    m.created_at
           }
         end
 
