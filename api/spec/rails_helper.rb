@@ -47,6 +47,20 @@ RSpec.configure do |config|
     )
   end
 
+  # Stub S3 so tests don't need real AWS credentials or S3_BUCKET env var.
+  # memory_json calls signed_url which hits S3 presigner — stub the presigner
+  # to return a fake URL instead.
+  config.before(:each) do
+    ENV["S3_BUCKET"]  ||= "test-bucket"
+    ENV["AWS_REGION"]  ||= "us-east-1"
+
+    fake_presigner = instance_double(Aws::S3::Presigner)
+    allow(Aws::S3::Presigner).to receive(:new).and_return(fake_presigner)
+    allow(fake_presigner).to receive(:presigned_url).and_return(
+      "https://test-bucket.s3.amazonaws.com/fake-signed-url"
+    )
+  end
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [
     Rails.root.join('spec/fixtures')
