@@ -92,6 +92,38 @@ struct Memory: Codable, Identifiable {
         case longitude
         case createdAt    = "created_at"
     }
+
+    // Rails serializes decimal columns as strings ("37.50002") to preserve precision.
+    // Swift's default Codable expects Double. Custom decoder handles both.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        chapterID = try c.decode(String.self, forKey: .chapterID)
+        ownerID = try c.decode(String.self, forKey: .ownerID)
+        mediaURL = try c.decodeIfPresent(URL.self, forKey: .mediaURL)
+        mediaType = try c.decode(String.self, forKey: .mediaType)
+        caption = try c.decodeIfPresent(String.self, forKey: .caption)
+        takenAt = try c.decodeIfPresent(Date.self, forKey: .takenAt)
+        eventDate = try c.decodeIfPresent(String.self, forKey: .eventDate)
+        emotionTags = try c.decodeIfPresent([String].self, forKey: .emotionTags)
+        width = try c.decodeIfPresent(Int.self, forKey: .width)
+        height = try c.decodeIfPresent(Int.self, forKey: .height)
+        visibility = try c.decode(String.self, forKey: .visibility)
+        locationName = try c.decodeIfPresent(String.self, forKey: .locationName)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+
+        // Decode latitude/longitude as String or Double (Rails sends strings for decimals)
+        if let str = try? c.decodeIfPresent(String.self, forKey: .latitude) {
+            latitude = Double(str)
+        } else {
+            latitude = try c.decodeIfPresent(Double.self, forKey: .latitude)
+        }
+        if let str = try? c.decodeIfPresent(String.self, forKey: .longitude) {
+            longitude = Double(str)
+        } else {
+            longitude = try c.decodeIfPresent(Double.self, forKey: .longitude)
+        }
+    }
 }
 
 // MARK: - Invitation Preview (unauthenticated)

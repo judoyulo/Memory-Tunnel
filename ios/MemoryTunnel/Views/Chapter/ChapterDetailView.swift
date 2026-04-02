@@ -19,6 +19,7 @@ final class ChapterDetailViewModel: ObservableObject {
         do {
             memories = try await APIClient.shared.memories(chapterID: chapterID)
         } catch {
+            print("[ChapterDetail] load error: \(error)")
             errorMessage = error.localizedDescription
         }
     }
