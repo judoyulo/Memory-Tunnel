@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_01_232747) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_02_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -162,6 +162,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_01_232747) do
     t.string "caption"
     t.uuid "chapter_id", null: false
     t.datetime "created_at", null: false
+    t.string "emotion_tags", default: [], array: true
+    t.date "event_date"
+    t.integer "height"
     t.decimal "latitude", precision: 10, scale: 6
     t.string "location_name"
     t.decimal "longitude", precision: 10, scale: 6
@@ -171,6 +174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_01_232747) do
     t.datetime "taken_at"
     t.datetime "updated_at", null: false
     t.string "visibility", default: "this_item", null: false
+    t.integer "width"
     t.index ["chapter_id", "created_at"], name: "index_memories_on_chapter_id_and_created_at"
     t.index ["chapter_id", "media_type"], name: "index_memories_on_chapter_id_and_media_type"
     t.index ["chapter_id", "owner_id", "visibility"], name: "index_memories_on_chapter_id_and_owner_id_and_visibility"
@@ -187,6 +191,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_01_232747) do
     t.string "phone", null: false
     t.string "push_token"
     t.datetime "updated_at", null: false
+    t.datetime "welcomed_at"
     t.index ["phone"], name: "index_users_on_phone", unique: true
   end
 

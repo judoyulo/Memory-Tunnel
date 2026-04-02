@@ -8,13 +8,13 @@ module Api
         entry = DailyCardQueueEntry
                   .includes(chapter: %i[member_a member_b])
                   .where(user: current_user, scheduled_for: Date.current)
-                  .where(delivered_at: nil)
                   .order(:priority)
                   .first
 
         return head :no_content unless entry
 
-        entry.update_column(:delivered_at, Time.current)
+        # Mark delivered on first fetch (analytics only — card stays visible all day)
+        entry.update_column(:delivered_at, Time.current) if entry.delivered_at.nil?
 
         render json: daily_card_json(entry)
       end

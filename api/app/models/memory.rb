@@ -16,9 +16,12 @@ class Memory < ApplicationRecord
   # when its local TTL > 50 minutes.
   SIGNED_URL_TTL = 3600 # seconds
 
+  def self.s3_client
+    @s3_client ||= Aws::S3::Client.new(region: ENV.fetch("AWS_REGION", "us-east-1"))
+  end
+
   def signed_url
-    s3 = Aws::S3::Client.new(region: ENV.fetch("AWS_REGION", "us-east-1"))
-    signer = Aws::S3::Presigner.new(client: s3)
+    signer = Aws::S3::Presigner.new(client: self.class.s3_client)
     signer.presigned_url(
       :get_object,
       bucket: ENV.fetch("S3_BUCKET"),
@@ -33,8 +36,7 @@ class Memory < ApplicationRecord
   def self.presign_upload(chapter_id:, owner_id:, content_type: "image/jpeg")
     ext = content_type.include?("audio") ? ".m4a" : ".jpg"
     key = "memories/#{chapter_id}/#{SecureRandom.uuid}#{ext}"
-    s3  = Aws::S3::Client.new(region: ENV.fetch("AWS_REGION", "us-east-1"))
-    signer = Aws::S3::Presigner.new(client: s3)
+    signer = Aws::S3::Presigner.new(client: s3_client)
 
     # NOTE: `acl:` param is intentionally omitted. Passing `acl: "private"` fails on
     # buckets with ObjectOwnership: BucketOwnerEnforced (ACLs disabled). Objects
@@ -54,6 +56,6 @@ class Memory < ApplicationRecord
 
   # Effective date for sorting and "N years ago" calculation
   def effective_date
-    taken_at || created_at
+    event_date&.to_datetime || taken_at || created_at
   end
 end

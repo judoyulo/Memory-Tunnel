@@ -8,8 +8,6 @@ module Api
       # ordered by effective date descending.
       def index
         memories = @chapter.memories_visible_to(current_user)
-                            .offset((page - 1) * per_page)
-                            .limit(per_page)
         render json: memories.map { |m| memory_json(m) }
       end
 
@@ -50,10 +48,25 @@ module Api
           media_type:    params.fetch(:media_type, "photo"),
           location_name: params[:location_name],
           latitude:      params[:latitude],
-          longitude:     params[:longitude]
+          longitude:     params[:longitude],
+          event_date:    params[:event_date],
+          emotion_tags:  params[:emotion_tags] || [],
+          width:         params[:width],
+          height:        params[:height]
         )
 
         @chapter.touch_last_memory!
+
+        # Queue welcome card on user's first memory ever
+        if current_user.welcomed_at.nil?
+          DailyCardQueueEntry.schedule!(
+            user:           current_user,
+            chapter:        @chapter,
+            trigger_type:   "welcome",
+            preferred_date: Date.current
+          )
+          current_user.update_column(:welcomed_at, Time.current)
+        end
 
         # Notify the other member
         partner = @chapter.other_member(current_user)
@@ -109,14 +122,18 @@ module Api
 
       def memory_json(memory)
         {
-          id:          memory.id,
-          chapter_id:  memory.chapter_id,
-          owner_id:    memory.owner_id,
-          media_url:   memory.s3_key.present? ? memory.signed_url : nil,
-          media_type:  memory.media_type,
-          caption:     memory.caption,
-          taken_at:    memory.taken_at,
-          visibility:  memory.visibility,
+          id:            memory.id,
+          chapter_id:    memory.chapter_id,
+          owner_id:      memory.owner_id,
+          media_url:     memory.s3_key.present? ? memory.signed_url : nil,
+          media_type:    memory.media_type,
+          caption:       memory.caption,
+          taken_at:      memory.taken_at,
+          event_date:    memory.event_date,
+          emotion_tags:  memory.emotion_tags,
+          width:         memory.width,
+          height:        memory.height,
+          visibility:    memory.visibility,
           location_name: memory.location_name,
           latitude:      memory.latitude,
           longitude:     memory.longitude,

@@ -48,12 +48,14 @@ RSpec.describe "Daily Card API", type: :request do
     end
 
     context "when a card was already delivered today" do
-      it "returns 204 (idempotent — no double delivery)" do
-        create_queue_entry(delivered_at: 1.hour.ago)
+      it "still returns the card (card persists all day, delivered_at is analytics only)" do
+        entry = create_queue_entry(delivered_at: 1.hour.ago)
 
         get "/api/v1/daily_card", headers: auth_headers
 
-        expect(response).to have_http_status(:no_content)
+        expect(response).to have_http_status(:ok)
+        body = JSON.parse(response.body)
+        expect(body["id"]).to eq(entry.id)
       end
     end
 
