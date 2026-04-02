@@ -53,7 +53,7 @@ final class ChapterDetailViewModel: ObservableObject {
     }
 }
 
-// MARK: - Chapter Detail View (Conversation Timeline)
+// MARK: - Chapter Detail View (Memory Journal)
 
 struct ChapterDetailView: View {
     let chapter: Chapter
@@ -64,6 +64,7 @@ struct ChapterDetailView: View {
     @State private var showTextComposer = false
     @State private var showShareSheet = false
     @State private var dismissOnThisDay = false
+    @State private var editingMemory: Memory?
 
     init(chapter: Chapter) {
         self.chapter = chapter
@@ -91,12 +92,16 @@ struct ChapterDetailView: View {
                             .padding(.top, Spacing.sm)
                     }
 
-                    // Conversation timeline
+                    // Journal timeline (metadata-first, single column)
                     ConversationTimelineView(
                         memories: vm.memories,
                         currentUserID: currentUserID,
+                        partnerName: chapter.partner?.displayName,
                         onDelete: { memory in
                             Task { await vm.deleteMemory(memory) }
+                        },
+                        onEdit: { memory in
+                            editingMemory = memory
                         }
                     )
                 }
@@ -109,12 +114,10 @@ struct ChapterDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if let partnerName = chapter.partner?.displayName {
-                    VStack(alignment: .trailing, spacing: 0) {
-                        Text(relationshipAge)
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.mtTertiary)
-                    }
+                if chapter.partner?.displayName != nil {
+                    Text(relationshipAge)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.mtTertiary)
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -136,9 +139,32 @@ struct ChapterDetailView: View {
             }
         }
         .sheet(isPresented: $showTextComposer) {
-            TextComposerView { text in
-                Task { await vm.addTextMemory(caption: text) }
+            TextComposerView { text, location, eventDate, tags in
+                Task {
+                    _ = try? await APIClient.shared.createTextMemory(
+                        chapterID: chapter.id,
+                        caption: text,
+                        locationName: location,
+                        eventDate: eventDate,
+                        emotionTags: tags.isEmpty ? nil : tags
+                    )
+                    await vm.load()
+                }
             }
+        }
+        .sheet(item: $editingMemory) { memory in
+            MemoryEditSheet(
+                memory: memory,
+                chapterID: chapter.id,
+                onSave: { updated in
+                    if let idx = vm.memories.firstIndex(where: { $0.id == updated.id }) {
+                        vm.memories[idx] = updated
+                    }
+                },
+                onDelete: {
+                    Task { await vm.deleteMemory(memory) }
+                }
+            )
         }
         .sheet(isPresented: $showShareSheet) {
             if chapter.partner != nil {

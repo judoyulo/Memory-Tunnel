@@ -87,7 +87,9 @@ module Api
         memory.update!(
           caption:       params.key?(:caption) ? params[:caption] : memory.caption,
           location_name: params.key?(:location_name) ? params[:location_name] : memory.location_name,
-          taken_at:      params.key?(:taken_at) ? params[:taken_at] : memory.taken_at
+          taken_at:      params.key?(:taken_at) ? params[:taken_at] : memory.taken_at,
+          event_date:    params.key?(:event_date) ? params[:event_date] : memory.event_date,
+          emotion_tags:  params.key?(:emotion_tags) ? (params[:emotion_tags] || []) : memory.emotion_tags
         )
 
         render json: memory_json(memory), status: :ok

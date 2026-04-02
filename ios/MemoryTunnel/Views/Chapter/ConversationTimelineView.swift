@@ -1,16 +1,17 @@
 import SwiftUI
 
-// MARK: - Conversation Timeline
+// MARK: - Journal Timeline View
 //
-// Bilateral timeline: left = you, right = them.
-// Center line connects memories visually.
-// Date section headers group by month.
-// Newest at bottom (like iMessage), scroll to bottom on appear.
+// Single-column memory journal. Metadata-first cards.
+// Replaces the bilateral left/right "DM chat" layout.
+// Date section headers group by month. Newest at bottom.
 
 struct ConversationTimelineView: View {
     let memories: [Memory]
     let currentUserID: String?
+    let partnerName: String?
     let onDelete: (Memory) -> Void
+    let onEdit: (Memory) -> Void
 
     @State private var selectedPhotoIndex: Int?
 
@@ -18,7 +19,6 @@ struct ConversationTimelineView: View {
         memories.filter { $0.mediaType == "photo" }
     }
 
-    /// Group memories by month for section headers
     private var sections: [(key: String, memories: [Memory])] {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
@@ -28,7 +28,6 @@ struct ConversationTimelineView: View {
             return formatter.string(from: date)
         }
 
-        // Maintain chronological order (ASC from server)
         var seen = Set<String>()
         var result: [(key: String, memories: [Memory])] = []
         for memory in memories {
@@ -45,30 +44,31 @@ struct ConversationTimelineView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 0) {
+                LazyVStack(spacing: Spacing.md) {
                     ForEach(sections, id: \.key) { section in
-                        // Date section header
                         dateSectionHeader(section.key)
 
                         ForEach(section.memories) { memory in
-                            let isOwn = memory.ownerID == currentUserID
-                            TimelineItemView(
+                            JournalEntryCard(
                                 memory: memory,
-                                isOwn: isOwn,
+                                currentUserID: currentUserID,
+                                partnerName: partnerName,
                                 onTapPhoto: {
                                     if memory.mediaType == "photo",
                                        let idx = photoMemories.firstIndex(where: { $0.id == memory.id }) {
                                         selectedPhotoIndex = idx
                                     }
                                 },
+                                onEdit: { onEdit(memory) },
                                 onDelete: { onDelete(memory) }
                             )
                             .id(memory.id)
                         }
                     }
                 }
+                .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.sm)
-                .padding(.bottom, 80) // space for floating button
+                .padding(.bottom, 80)
             }
             .onAppear {
                 if let lastID = memories.last?.id {
@@ -88,67 +88,18 @@ struct ConversationTimelineView: View {
 
     private func dateSectionHeader(_ title: String) -> some View {
         HStack {
-            Spacer()
             Text(title)
-                .font(.mtCaption)
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.mtTertiary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(Color.mtBackground)
+                .tracking(0.5)
             Spacer()
         }
-        .padding(.vertical, Spacing.md)
+        .padding(.top, Spacing.lg)
+        .padding(.bottom, Spacing.xs)
     }
 }
 
 private struct PhotoDetailItem: Identifiable {
     let index: Int
     var id: Int { index }
-}
-
-// MARK: - Timeline Item (single memory positioned left or right)
-
-struct TimelineItemView: View {
-    let memory: Memory
-    let isOwn: Bool
-    let onTapPhoto: () -> Void
-    let onDelete: () -> Void
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            if !isOwn { Spacer(minLength: 0) }
-
-            TimelineMemoryCard(
-                memory: memory,
-                onTapPhoto: onTapPhoto,
-                onDelete: onDelete
-            )
-            .frame(maxWidth: UIScreen.main.bounds.width * 0.55)
-
-            if isOwn { Spacer(minLength: 0) }
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 4)
-        .background(
-            // Center line segment
-            GeometryReader { geo in
-                Rectangle()
-                    .fill(Color.mtLabel.opacity(0.08))
-                    .frame(width: 1)
-                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
-                    .frame(height: geo.size.height)
-            }
-        )
-        .overlay(
-            // Timeline dot at center
-            Circle()
-                .fill(Color.mtSurface)
-                .frame(width: 8, height: 8)
-                .overlay(
-                    Circle()
-                        .stroke(Color.mtLabel.opacity(0.12), lineWidth: 1.5)
-                )
-            , alignment: .center
-        )
-    }
 }

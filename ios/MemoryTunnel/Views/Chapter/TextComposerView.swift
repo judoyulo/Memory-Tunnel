@@ -2,13 +2,15 @@ import SwiftUI
 
 // MARK: - Text Composer View
 //
-// Warm text entry sheet. Replaces the plain TextField-in-sheet approach.
-// Cream background, generous padding, spring animation on save.
+// Warm text entry with metadata fields (location, event date, tags).
 
 struct TextComposerView: View {
-    let onSave: (String) -> Void
+    let onSave: (String, String?, Date?, [String]) -> Void  // text, location, date, tags
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
+    @State private var locationName = ""
+    @State private var eventDate: Date?
+    @State private var emotionTags: Set<String> = []
     @FocusState private var isFocused: Bool
 
     private var canSave: Bool {
@@ -17,31 +19,39 @@ struct TextComposerView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: Spacing.md) {
-                TextEditor(text: $text)
-                    .font(.system(size: 17))
-                    .foregroundStyle(Color.mtLabel)
-                    .scrollContentBackground(.hidden)
-                    .focused($isFocused)
-                    .frame(minHeight: 120)
-                    .padding(Spacing.sm)
-                    .background(Color.mtSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.button))
-                    .overlay(alignment: .topLeading) {
-                        if text.isEmpty {
-                            Text("Write a memory, thought, or note...")
-                                .font(.system(size: 17))
-                                .foregroundStyle(Color.mtTertiary)
-                                .padding(Spacing.sm)
-                                .padding(.top, 8)
-                                .padding(.leading, 5)
-                                .allowsHitTesting(false)
+            ScrollView {
+                VStack(spacing: Spacing.lg) {
+                    // Text area
+                    TextEditor(text: $text)
+                        .font(.system(size: 17))
+                        .foregroundStyle(Color.mtLabel)
+                        .scrollContentBackground(.hidden)
+                        .focused($isFocused)
+                        .frame(minHeight: 120)
+                        .padding(Spacing.sm)
+                        .background(Color.mtSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                        .overlay(alignment: .topLeading) {
+                            if text.isEmpty {
+                                Text("Write a memory, thought, or note...")
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(Color.mtTertiary)
+                                    .padding(Spacing.sm)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 5)
+                                    .allowsHitTesting(false)
+                            }
                         }
-                    }
 
-                Spacer()
+                    // Metadata fields
+                    MemoryMetadataFields(
+                        locationName: $locationName,
+                        eventDate: $eventDate,
+                        emotionTags: $emotionTags
+                    )
+                }
+                .padding(Spacing.xl)
             }
-            .padding(Spacing.xl)
             .background(Color.mtBackground)
             .navigationTitle("Write something")
             .navigationBarTitleDisplayMode(.inline)
@@ -53,9 +63,10 @@ struct TextComposerView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         let content = text
-                        text = ""
+                        let loc = locationName.isEmpty ? nil : locationName
+                        let tags = Array(emotionTags)
                         dismiss()
-                        onSave(content)
+                        onSave(content, loc, eventDate, tags)
                     }
                     .font(.mtButton)
                     .foregroundStyle(canSave ? Color.mtLabel : Color.mtTertiary)

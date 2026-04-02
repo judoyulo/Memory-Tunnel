@@ -1,124 +1,180 @@
 import SwiftUI
 import AVFoundation
 
-// MARK: - Timeline Memory Card
+// MARK: - Journal Entry Card
 //
-// Renders a memory in the conversation timeline.
-// Switches on mediaType: photo, voice, text, location_checkin.
+// Metadata-first memory card for the journal timeline.
+// Date + location = hero. Photo = thumbnail. Caption = body.
+// Tags + sender = footer.
 
-struct TimelineMemoryCard: View {
+struct JournalEntryCard: View {
     let memory: Memory
+    let currentUserID: String?
+    let partnerName: String?
     let onTapPhoto: () -> Void
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            switch memory.mediaType {
-            case "photo":  photoCard
-            case "voice":  voiceCard
-            case "text":   textCard
-            case "location_checkin": locationCard
-            default: textCard
-            }
-
-            // Caption (photo/voice/location only, not text)
-            if memory.mediaType != "text",
-               let caption = memory.caption, !caption.isEmpty {
-                Text(caption)
-                    .font(.mtBody)
+            // MARK: Date + Location (hero metadata)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(dateText)
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.mtLabel)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 4)
-                    .padding(.bottom, 8)
+
+                if let loc = memory.locationName, !loc.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "mappin")
+                            .font(.system(size: 10))
+                        Text(loc)
+                            .lineLimit(1)
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.mtSecondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+
+            Divider()
+                .background(Color.mtLabel.opacity(0.08))
+
+            // MARK: Content
+            switch memory.mediaType {
+            case "photo":  photoContent
+            case "voice":  voiceContent
+            case "text":   textContent
+            case "location_checkin": locationContent
+            default: textContent
             }
 
-            // Metadata row
-            metadataRow
-                .padding(.horizontal, 10)
-                .padding(.bottom, 8)
+            // MARK: Tags + Sender footer
+            HStack(alignment: .bottom) {
+                // Tags
+                if let tags = memory.emotionTags, !tags.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(tags.prefix(3), id: \.self) { tag in
+                            Text("#\(tag)")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.mtSecondary)
+                        }
+                    }
+                }
+                Spacer()
+                // Sender
+                Text(senderLabel)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.mtTertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
         .background(Color.mtSurface)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        .onLongPressGesture { onEdit() }
         .contextMenu {
+            Button { onEdit() } label: {
+                Label("Edit", systemImage: "pencil")
+            }
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
             }
         }
     }
 
-    // MARK: - Photo Card
+    // MARK: - Date text
 
-    @ViewBuilder
-    private var photoCard: some View {
-        let photoHeight: CGFloat = {
-            if let ratio = memory.aspectRatio {
-                let width = UIScreen.main.bounds.width * 0.55 - 2 // card width minus border
-                return min(width / ratio, 280)
-            }
-            return 200
-        }()
+    private var dateText: String {
+        // Prefer event_date, then taken_at, then created_at
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .none
 
-        Button(action: onTapPhoto) {
-            AsyncImage(url: memory.mediaURL) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
-                Color.mtSurface
+        if let eventDateStr = memory.eventDate {
+            let parser = DateFormatter()
+            parser.dateFormat = "yyyy-MM-dd"
+            if let parsed = parser.date(from: eventDateStr) {
+                return formatter.string(from: parsed)
             }
-            .frame(height: photoHeight)
-            .frame(maxWidth: .infinity)
-            .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: 2))
         }
-        .buttonStyle(.plain)
+        return formatter.string(from: memory.takenAt ?? memory.createdAt)
     }
 
-    // MARK: - Voice Card
+    // MARK: - Sender label
 
-    @ViewBuilder
-    private var voiceCard: some View {
-        VoiceClipTileView(memory: memory)
-            .padding(10)
+    private var senderLabel: String {
+        let isOwn = memory.ownerID == currentUserID
+        if isOwn { return "— You" }
+        return "— \(partnerName ?? "them")"
     }
 
-    // MARK: - Text Card
+    // MARK: - Photo (thumbnail + caption side by side)
 
     @ViewBuilder
-    private var textCard: some View {
+    private var photoContent: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Button(action: onTapPhoto) {
+                AsyncImage(url: memory.mediaURL) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } placeholder: {
+                    Color.mtBackground
+                }
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            if let caption = memory.caption, !caption.isEmpty {
+                Text(caption)
+                    .font(.mtBody)
+                    .foregroundStyle(Color.mtLabel)
+                    .lineLimit(4)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Voice
+
+    @ViewBuilder
+    private var voiceContent: some View {
         VStack(alignment: .leading, spacing: 6) {
+            VoiceClipTileView(memory: memory)
+
+            if let caption = memory.caption, !caption.isEmpty {
+                Text(caption)
+                    .font(.mtBody)
+                    .foregroundStyle(Color.mtLabel)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - Text
+
+    @ViewBuilder
+    private var textContent: some View {
+        VStack(alignment: .leading, spacing: 4) {
             Text(memory.caption ?? "")
                 .font(.system(size: 16, design: .serif))
                 .italic()
                 .foregroundStyle(Color.mtLabel)
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let tags = memory.emotionTags, !tags.isEmpty {
-                HStack(spacing: 4) {
-                    ForEach(tags.prefix(2), id: \.self) { tag in
-                        Text(tag)
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.mtSecondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.mtBackground)
-                            .clipShape(Capsule())
-                    }
-                    if tags.count > 2 {
-                        Text("+\(tags.count - 2)")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.mtTertiary)
-                    }
-                }
-            }
         }
-        .padding(12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 
-    // MARK: - Location Card
+    // MARK: - Location check-in
 
     @ViewBuilder
-    private var locationCard: some View {
+    private var locationContent: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: "mappin.circle.fill")
                 .font(.system(size: 28))
@@ -135,134 +191,9 @@ struct TimelineMemoryCard: View {
             }
             Spacer()
         }
-        .padding(12)
-    }
-
-    // MARK: - Metadata Row
-
-    @ViewBuilder
-    private var metadataRow: some View {
-        HStack(spacing: 4) {
-            if let loc = memory.locationName {
-                Image(systemName: "mappin")
-                    .font(.system(size: 9))
-                    .foregroundStyle(Color.mtTertiary)
-                Text(loc)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.mtTertiary)
-                    .lineLimit(1)
-                Text("·")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.mtTertiary)
-            }
-            Text(timeAgoText)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.mtTertiary)
-            Spacer()
-        }
-    }
-
-    private var timeAgoText: String {
-        let date = memory.takenAt ?? memory.createdAt
-        let components = Calendar.current.dateComponents([.year, .month, .day], from: date, to: Date())
-        if let years = components.year, years > 0 {
-            return years == 1 ? "1 year ago" : "\(years) years ago"
-        }
-        if let months = components.month, months > 0 {
-            return months == 1 ? "1 month ago" : "\(months) months ago"
-        }
-        if let days = components.day, days > 0 {
-            return days == 1 ? "Yesterday" : "\(days) days ago"
-        }
-        return "Today"
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 }
 
-// MARK: - Voice Clip Tile (inline playback)
-
-struct VoiceClipTileView: View {
-    let memory: Memory
-    @State private var isPlaying = false
-    @State private var localAudioURL: URL?
-    @State private var player: AVAudioPlayer?
-    @State private var showError = false
-
-    var body: some View {
-        VStack(spacing: Spacing.sm) {
-            HStack {
-                Image(systemName: "waveform")
-                    .foregroundStyle(Color.mtSecondary)
-                Text("Voice clip")
-                    .font(.mtCaption)
-                    .foregroundStyle(Color.mtSecondary)
-                Spacer()
-
-                if showError {
-                    Button("Retry") { Task { await downloadAndPlay() } }
-                        .font(.mtCaption)
-                        .foregroundStyle(Color.mtLabel)
-                } else {
-                    Button {
-                        if isPlaying { stopPlayback() } else { Task { await downloadAndPlay() } }
-                    } label: {
-                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .foregroundStyle(Color.mtLabel)
-                    }
-                }
-            }
-
-            // Waveform visualization
-            HStack(spacing: 2) {
-                ForEach(0..<20, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(isPlaying ? Color.mtAccent : Color.mtSecondary.opacity(0.4))
-                        .frame(width: 3, height: CGFloat.random(in: 8...28))
-                }
-            }
-            .frame(height: 32)
-        }
-    }
-
-    private func downloadAndPlay() async {
-        showError = false
-        if let url = localAudioURL {
-            play(url: url)
-            return
-        }
-        guard let url = memory.mediaURL else { showError = true; return }
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 403 {
-                // Expired URL — caller should refresh via refresh_url endpoint
-                showError = true
-                return
-            }
-            let tmp = FileManager.default.temporaryDirectory
-                .appendingPathComponent(memory.id)
-                .appendingPathExtension("m4a")
-            try data.write(to: tmp)
-            localAudioURL = tmp
-            play(url: tmp)
-        } catch {
-            showError = true
-        }
-    }
-
-    private func play(url: URL) {
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback)
-            try AVAudioSession.sharedInstance().setActive(true)
-            player = try AVAudioPlayer(contentsOf: url)
-            player?.play()
-            isPlaying = true
-        } catch {
-            showError = true
-        }
-    }
-
-    private func stopPlayback() {
-        player?.stop()
-        isPlaying = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-    }
-}
+// VoiceClipTileView is defined in the original file and reused here

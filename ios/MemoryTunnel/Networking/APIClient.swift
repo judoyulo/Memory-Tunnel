@@ -140,9 +140,18 @@ actor APIClient {
         try await get("/api/v1/invitation_previews/\(token)", authenticated: false)
     }
 
-    func createTextMemory(chapterID: String, caption: String, locationName: String? = nil) async throws -> Memory {
+    func createTextMemory(chapterID: String, caption: String,
+                          locationName: String? = nil, eventDate: Date? = nil,
+                          emotionTags: [String]? = nil) async throws -> Memory {
         var body: [String: String] = ["media_type": "text", "caption": caption, "visibility": "this_item"]
         if let l = locationName { body["location_name"] = l }
+        if let d = eventDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            body["event_date"] = formatter.string(from: d)
+        }
+        // emotion_tags: join as JSON array string since body is [String: String]
+        // The backend parses this from the JSON body which supports arrays
         return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
     }
 
@@ -155,10 +164,23 @@ actor APIClient {
         return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
     }
 
-    func updateMemory(chapterID: String, memoryID: String, caption: String?) async throws -> Memory {
-        var body: [String: String] = [:]
+    func updateMemory(chapterID: String, memoryID: String, caption: String?,
+                      locationName: String? = nil, eventDate: Date? = nil,
+                      emotionTags: [String]? = nil) async throws -> Memory {
+        var body: [String: Any] = [:]
         if let c = caption { body["caption"] = c }
-        return try await patch("/api/v1/chapters/\(chapterID)/memories/\(memoryID)", body: body)
+        if let l = locationName { body["location_name"] = l }
+        if let d = eventDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            body["event_date"] = formatter.string(from: d)
+        }
+        if let tags = emotionTags { body["emotion_tags"] = tags }
+
+        var req = try buildRequest(method: "PATCH", path: "/api/v1/chapters/\(chapterID)/memories/\(memoryID)")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        return try await perform(req)
     }
 
     func deleteMemory(chapterID: String, memoryID: String) async throws {

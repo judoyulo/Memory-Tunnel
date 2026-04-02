@@ -40,8 +40,10 @@
 		9A2839A3E317579FC9B10732 /* AppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CB760502D99E6F5061C9EC2 /* AppIconView.swift */; };
 		9E9DA61DB072F6F90A3C2B07 /* BirthdayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB76E740968FA6326B7AB5C0 /* BirthdayService.swift */; };
 		B169731CC604D9464FBCFA86 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28C635046FF65FC63FFC22A /* WaveformView.swift */; };
+		B454BFD187A504D95A9E84D6 /* MemoryMetadataFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75EE9505EE7A0C330E994154 /* MemoryMetadataFields.swift */; };
 		B49A3B44AB2EF9BDE97761BE /* ChapterListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F4F13AA020559F5C8C9163 /* ChapterListView.swift */; };
 		B73786D849A19C52C1EA0154 /* SendFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84C03B23DB9D61F1A074F22 /* SendFlowView.swift */; };
+		B844D93F258048454BD7D4CD /* MemoryEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7163AA5FA993CC04AB76B3EA /* MemoryEditSheet.swift */; };
 		C8CA8BCE326263F8E3BB48E3 /* InvitedLandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23C273D3D98FC91476FEFAA7 /* InvitedLandingView.swift */; };
 		CD6294D54FC0A8DDBDD328D6 /* FaceScanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D821FFD559B90C5B72F78888 /* FaceScanSheet.swift */; };
 		DA58930C8C7CA7EEDE4FDDA1 /* PhotoPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D700BC0C40A8FC3ADAD12A8B /* PhotoPermissionView.swift */; };
@@ -75,7 +77,9 @@
 		622DA1C3E1E0F8D49A5B16C2 /* InviteFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFlowView.swift; sourceTree = "<group>"; };
 		690DD1E433D7B3C88548F7B9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		6B9655209F364668AF229806 /* TimelineMemoryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineMemoryCard.swift; sourceTree = "<group>"; };
+		7163AA5FA993CC04AB76B3EA /* MemoryEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryEditSheet.swift; sourceTree = "<group>"; };
 		751F4376D8313D67CC43A610 /* FaceIndexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceIndexService.swift; sourceTree = "<group>"; };
+		75EE9505EE7A0C330E994154 /* MemoryMetadataFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryMetadataFields.swift; sourceTree = "<group>"; };
 		77E3D57DF35B477A9FC67124 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceDetectionService.swift; sourceTree = "<group>"; };
 		7C3EE990F6ADD9AE96A0769B /* FaceBubbleLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceBubbleLayout.swift; sourceTree = "<group>"; };
@@ -164,6 +168,7 @@
 			children = (
 				1CB760502D99E6F5061C9EC2 /* AppIconView.swift */,
 				DBCB7F0577C7E7795737722A /* DesignTokens.swift */,
+				75EE9505EE7A0C330E994154 /* MemoryMetadataFields.swift */,
 				3F8F866A6F13DC70F180DB20 /* PHAssetThumbnailView.swift */,
 				51CAE2455ACBEB181BAFFCFC /* RecordButton.swift */,
 				B28C635046FF65FC63FFC22A /* WaveformView.swift */,
@@ -208,6 +213,7 @@
 				616F463C1F1E291F1092BA0B /* ConversationTimelineView.swift */,
 				D821FFD559B90C5B72F78888 /* FaceScanSheet.swift */,
 				4838DBD4F103F4BA5A4980FD /* FaceTaggingBanner.swift */,
+				7163AA5FA993CC04AB76B3EA /* MemoryEditSheet.swift */,
 				BCEB844F1A2262AA9ED44CFC /* OnThisDayCard.swift */,
 				5615637CB4DF14AD97339030 /* PhotoDetailView.swift */,
 				B501C9D69F2D804033D566D1 /* TextComposerView.swift */,
@@ -457,6 +463,8 @@
 				7C5E06CE9EA360BEA493F859 /* FaceTaggingBanner.swift in Sources */,
 				1B9BE1CBAAF5A716615D3A2F /* InviteFlowView.swift in Sources */,
 				C8CA8BCE326263F8E3BB48E3 /* InvitedLandingView.swift in Sources */,
+				B844D93F258048454BD7D4CD /* MemoryEditSheet.swift in Sources */,
+				B454BFD187A504D95A9E84D6 /* MemoryMetadataFields.swift in Sources */,
 				2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */,
 				15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */,
 				76B7956F37FA5BB4D387C166 /* OnThisDayCard.swift in Sources */,
