@@ -496,6 +496,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app;
+				PRODUCT_NAME = MemoryTunnel;
 			};
 			name = Debug;
 		};
@@ -533,6 +534,7 @@
 				INFOPLIST_FILE = MemoryTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app;
+				PRODUCT_NAME = MemoryTunnel;
 			};
 			name = Release;
 		};

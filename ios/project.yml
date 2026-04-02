@@ -27,6 +27,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.memorytunnel.app
+        PRODUCT_NAME: MemoryTunnel
         INFOPLIST_FILE: MemoryTunnel/Info.plist
         CODE_SIGN_STYLE: Automatic
         ENABLE_PREVIEWS: YES
