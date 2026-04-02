@@ -61,6 +61,62 @@ Code is complete (`ApnsService`, push jobs, iOS push registration all wired).
 Boot check initializer (`apns_check.rb`) logs a warning if these are missing.
 **Why:** Without these, push notifications silently no-op.
 
+---
+
+## Deferred from Chapter Timeline Redesign (2026-04-01)
+
+### Auto-play voice clip preview on scroll — P3
+**What:** When scrolling past a voice clip in the timeline, play a 2-second preview at low volume.
+**Why:** Makes the timeline feel alive, ambient presence. Creates a soundscape of the friendship.
+**Pros:** Emotional depth, differentiation from other apps.
+**Cons:** Risk of annoyance if not tuned. Complex scroll tracking + audio ducking.
+**Context:** Requires scroll position monitoring via `onAppear`/`onDisappear` on voice cards, AVAudioPlayer with ducked volume, managing multiple clips. Needs real user testing to validate desirability.
+**Effort:** M (human: ~2 weeks / CC: ~1 hr)
+**Priority:** P3
+**Depends on:** Chapter timeline redesign (voice card implementation)
+
+### Map dot visualization — P2
+**What:** Toggleable mini-map showing dots for every memory with a location. Tap a dot to jump to that memory in the timeline.
+**Why:** Visual representation of shared geography. "We've been to 12 cities together."
+**Pros:** Beautiful, emotional, no competitor has this.
+**Cons:** Needs real location data to be meaningful. MapKit dot clustering is non-trivial.
+**Context:** Uses existing `latitude`/`longitude` fields on memories. Requires MapKit + `MKAnnotation` clustering + timeline navigation via `ScrollViewReader`.
+**Effort:** M (human: ~2 weeks / CC: ~1 hr)
+**Priority:** P2
+**Depends on:** Chapter timeline redesign (timeline view + location data)
+
+### Chapter color derived from photos — P3
+**What:** Compute dominant color palette from a chapter's photos. Subtle tint on chapter header. Each chapter feels chromatically unique.
+**Why:** Visual personality per chapter. "The Barcelona chapter is warm amber, the Tokyo chapter is cool blue."
+**Pros:** Differentiation, delight, each chapter feels unique.
+**Cons:** Image analysis at load time, caching strategy needed, design decisions about tint subtlety.
+**Context:** Use `CIAreaAverage` filter on first 5 photos. Cache result in UserDefaults keyed by chapter ID. Apply as 8% opacity tint on chapter header background.
+**Effort:** S (human: ~1 week / CC: ~30 min)
+**Priority:** P3
+**Depends on:** Chapter timeline redesign
+
+### Typing indicator / ambient presence — P3
+**What:** When partner is creating a memory, show subtle "..." indicator in timeline. Like iMessage typing.
+**Why:** Ambient connection. "Someone is thinking about me right now."
+**Pros:** Emotional immediacy, differentiation.
+**Cons:** Requires real-time infrastructure (WebSocket/ActionCable) that doesn't exist.
+**Context:** Backend is API-mode Rails with no real-time layer. Would need ActionCable + Redis (or polling fallback). iOS: subscribe to presence channel per chapter.
+**Effort:** L (human: ~1 month / CC: ~2 hr)
+**Priority:** P3
+**Depends on:** Real-time infrastructure buildout
+
+### Scrapbook export — P2
+**What:** Generate a shareable scrapbook-style image from a chapter's memories. Photos at slight random rotations, text as sticky notes, voice clips as waveform tiles. Share via UIActivityViewController.
+**Why:** Growth mechanic + gift feature + cold-start invitation vehicle. "You don't ask someone to build a scrapbook together. You send them a beautiful scrapbook and say 'remember this?'"
+**Pros:** Off-app sharing, invitation pull (not push), unique to Memory Tunnel.
+**Cons:** Image rendering is non-trivial, design decisions about layout.
+**Context:** Generate using `UIGraphicsImageRenderer` or SwiftUI snapshot. Layout algorithm: random rotations (2-5 degrees), overlapping tiles. Share via `UIActivityViewController`.
+**Effort:** M (human: ~2 weeks / CC: ~1 hr)
+**Priority:** P2
+**Depends on:** Chapter timeline redesign (memory data access patterns)
+
+---
+
 ### Replace Vision landmarks with Core ML face embeddings — P1
 Vision landmark descriptors (76 x/y points = 152 floats) are fundamentally wrong for face identity.
 They compare face geometry, not identity. Same person at different angles gets split. Different people
