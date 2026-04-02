@@ -196,4 +196,80 @@ struct JournalEntryCard: View {
     }
 }
 
-// VoiceClipTileView is defined in the original file and reused here
+// MARK: - Voice Clip Tile (inline playback)
+
+struct VoiceClipTileView: View {
+    let memory: Memory
+    @State private var isPlaying = false
+    @State private var localAudioURL: URL?
+    @State private var player: AVAudioPlayer?
+    @State private var showError = false
+
+    var body: some View {
+        VStack(spacing: Spacing.sm) {
+            HStack {
+                Image(systemName: "waveform")
+                    .foregroundStyle(Color.mtSecondary)
+                Text("Voice clip")
+                    .font(.mtCaption)
+                    .foregroundStyle(Color.mtSecondary)
+                Spacer()
+
+                if showError {
+                    Button("Retry") { Task { await downloadAndPlay() } }
+                        .font(.mtCaption)
+                        .foregroundStyle(Color.mtLabel)
+                } else {
+                    Button {
+                        if isPlaying { stopPlayback() } else { Task { await downloadAndPlay() } }
+                    } label: {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .foregroundStyle(Color.mtLabel)
+                    }
+                }
+            }
+
+            HStack(spacing: 2) {
+                ForEach(0..<20, id: \.self) { _ in
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(isPlaying ? Color.mtAccent : Color.mtSecondary.opacity(0.4))
+                        .frame(width: 3, height: CGFloat.random(in: 8...28))
+                }
+            }
+            .frame(height: 32)
+        }
+    }
+
+    private func downloadAndPlay() async {
+        showError = false
+        if let url = localAudioURL { play(url: url); return }
+        guard let url = memory.mediaURL else { showError = true; return }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, http.statusCode == 403 {
+                showError = true; return
+            }
+            let tmp = FileManager.default.temporaryDirectory
+                .appendingPathComponent(memory.id).appendingPathExtension("m4a")
+            try data.write(to: tmp)
+            localAudioURL = tmp
+            play(url: tmp)
+        } catch { showError = true }
+    }
+
+    private func play(url: URL) {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+            try AVAudioSession.sharedInstance().setActive(true)
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.play()
+            isPlaying = true
+        } catch { showError = true }
+    }
+
+    private func stopPlayback() {
+        player?.stop()
+        isPlaying = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
