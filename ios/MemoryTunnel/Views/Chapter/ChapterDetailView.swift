@@ -35,7 +35,7 @@ final class ChapterDetailViewModel: ObservableObject {
     func addTextMemory(caption: String) async {
         do {
             let memory = try await APIClient.shared.createTextMemory(chapterID: chapterID, caption: caption)
-            memories.insert(memory, at: 0)
+            memories.append(memory) // ASC order: newest at bottom
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -53,21 +53,25 @@ final class ChapterDetailViewModel: ObservableObject {
     }
 }
 
-// MARK: - Chapter Detail View (Timeline Feed)
+// MARK: - Chapter Detail View (Conversation Timeline)
 
 struct ChapterDetailView: View {
     let chapter: Chapter
+    @EnvironmentObject var appState: AppState
     @StateObject private var vm: ChapterDetailViewModel
-    @State private var showAddMenu = false
     @State private var showSendFlow = false
-    @State private var showVoiceFlow = false
-    @State private var showTextEntry = false
-    @State private var newTextContent = ""
+    @State private var showVoiceRecorder = false
+    @State private var showTextComposer = false
     @State private var showShareSheet = false
+    @State private var dismissOnThisDay = false
 
     init(chapter: Chapter) {
         self.chapter = chapter
         _vm = StateObject(wrappedValue: ChapterDetailViewModel(chapterID: chapter.id))
+    }
+
+    private var currentUserID: String? {
+        appState.currentUser?.id
     }
 
     var body: some View {
@@ -79,7 +83,23 @@ struct ChapterDetailView: View {
             } else if vm.memories.isEmpty {
                 emptyState
             } else {
-                timeline
+                VStack(spacing: 0) {
+                    // On This Day card
+                    if !dismissOnThisDay,
+                       let match = OnThisDayCard.findMatch(in: vm.memories) {
+                        OnThisDayCard(memory: match, onDismiss: { dismissOnThisDay = true })
+                            .padding(.top, Spacing.sm)
+                    }
+
+                    // Conversation timeline
+                    ConversationTimelineView(
+                        memories: vm.memories,
+                        currentUserID: currentUserID,
+                        onDelete: { memory in
+                            Task { await vm.deleteMemory(memory) }
+                        }
+                    )
+                }
             }
 
             // Floating '+' button
@@ -88,6 +108,15 @@ struct ChapterDetailView: View {
         .navigationTitle(chapter.name ?? chapter.partner?.displayName ?? "Chapter")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if let partnerName = chapter.partner?.displayName {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text(relationshipAge)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.mtTertiary)
+                    }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showShareSheet = true
@@ -101,16 +130,18 @@ struct ChapterDetailView: View {
             SendFlowView(chapterID: chapter.id)
                 .onDisappear { Task { await vm.load() } }
         }
-        .sheet(isPresented: $showVoiceFlow) {
-            VoiceFlowView(chapterID: chapter.id)
-                .onDisappear { Task { await vm.load() } }
+        .sheet(isPresented: $showVoiceRecorder) {
+            VoiceRecorderView(chapterID: chapter.id) {
+                Task { await vm.load() }
+            }
         }
-        .sheet(isPresented: $showTextEntry) {
-            textEntrySheet
+        .sheet(isPresented: $showTextComposer) {
+            TextComposerView { text in
+                Task { await vm.addTextMemory(caption: text) }
+            }
         }
         .sheet(isPresented: $showShareSheet) {
-            if let invitation = chapter.partner {
-                // Share the chapter invitation link
+            if chapter.partner != nil {
                 ShareLink(item: URL(string: "https://app.memorytunnel.com/i/\(chapter.id)")!) {
                     Text("Share invite link")
                 }
@@ -142,23 +173,6 @@ struct ChapterDetailView: View {
         .padding(Spacing.xl)
     }
 
-    // MARK: - Timeline Feed
-
-    private var timeline: some View {
-        ScrollView {
-            LazyVStack(spacing: Spacing.md) {
-                ForEach(vm.memories) { memory in
-                    MemoryCardView(memory: memory, onDelete: {
-                        Task { await vm.deleteMemory(memory) }
-                    })
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.top, Spacing.sm)
-            .padding(.bottom, 80) // space for floating button
-        }
-    }
-
     // MARK: - Floating Add Button
 
     private var addButton: some View {
@@ -169,12 +183,12 @@ struct ChapterDetailView: View {
                 Label("Photo", systemImage: "photo")
             }
             Button {
-                showVoiceFlow = true
+                showVoiceRecorder = true
             } label: {
                 Label("Voice clip", systemImage: "waveform")
             }
             Button {
-                showTextEntry = true
+                showTextComposer = true
             } label: {
                 Label("Write something", systemImage: "text.quote")
             }
@@ -185,210 +199,31 @@ struct ChapterDetailView: View {
                 .frame(width: 56, height: 56)
                 .background(Color.mtLabel)
                 .clipShape(Circle())
-                // No shadow — DESIGN.md: "Decoration level: None"
         }
         .padding(.trailing, Spacing.lg)
         .padding(.bottom, Spacing.lg)
     }
 
-    // MARK: - Text Entry Sheet
+    // MARK: - Relationship Age
 
-    private var textEntrySheet: some View {
-        NavigationStack {
-            VStack(spacing: Spacing.md) {
-                TextField("Write a memory, thought, or note...", text: $newTextContent, axis: .vertical)
-                    .font(.mtBody)
-                    .lineLimit(5...10)
-                    .padding(Spacing.md)
-                    .background(Color.mtSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.button))
-
-                Spacer()
-            }
-            .padding(Spacing.xl)
-            .background(Color.mtBackground)
-            .navigationTitle("Write something")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        newTextContent = ""
-                        showTextEntry = false
-                    }
-                    .foregroundStyle(Color.mtSecondary)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        let text = newTextContent
-                        newTextContent = ""
-                        showTextEntry = false
-                        Task { await vm.addTextMemory(caption: text) }
-                    }
-                    .font(.mtButton)
-                    .foregroundStyle(Color.mtLabel)
-                    .disabled(newTextContent.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            }
+    private var relationshipAge: String {
+        // Use chapter creation date as relationship start
+        // (chapters don't have createdAt exposed, so use first memory or lastMemoryAt)
+        guard let firstMemoryDate = vm.memories.first?.createdAt ?? chapter.lastMemoryAt else {
+            return ""
         }
-        .presentationDetents([.medium])
+        let components = Calendar.current.dateComponents([.year, .month], from: firstMemoryDate, to: Date())
+        let years = components.year ?? 0
+        let months = components.month ?? 0
+        if years > 0 && months > 0 {
+            return "\(years)y \(months)m"
+        } else if years > 0 {
+            return "\(years) year\(years == 1 ? "" : "s")"
+        } else if months > 0 {
+            return "\(months) month\(months == 1 ? "" : "s")"
+        }
+        return "Just started"
     }
 }
 
-// MARK: - Memory Card (Timeline Item)
-
-struct MemoryCardView: View {
-    let memory: Memory
-    let onDelete: () -> Void
-    @State private var showPlayer = false
-    @State private var localAudioURL: URL?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Date + location header
-            HStack(spacing: Spacing.xs) {
-                if let date = memory.takenAt ?? Optional(memory.createdAt) {
-                    Text(date, style: .date)
-                        .font(.mtCaption)
-                        .foregroundStyle(Color.mtTertiary)
-                }
-                if let loc = memory.locationName {
-                    Text("·")
-                        .font(.mtCaption)
-                        .foregroundStyle(Color.mtTertiary)
-                    Image(systemName: "mappin")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.mtTertiary)
-                    Text(loc)
-                        .font(.mtCaption)
-                        .foregroundStyle(Color.mtTertiary)
-                        .lineLimit(1)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.top, Spacing.sm)
-            .padding(.bottom, Spacing.xs)
-
-            // Content based on type
-            switch memory.mediaType {
-            case "photo":
-                photoContent
-            case "voice":
-                voiceContent
-            case "text":
-                textContent
-            case "location_checkin":
-                locationContent
-            default:
-                textContent
-            }
-
-            // Caption (if present and not a text-only memory)
-            if memory.mediaType != "text", let caption = memory.caption, !caption.isEmpty {
-                Text(caption)
-                    .font(.mtBody)
-                    .foregroundStyle(Color.mtLabel)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.top, Spacing.xs)
-                    .padding(.bottom, Spacing.sm)
-            }
-        }
-        .background(Color.mtSurface)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
-        .contextMenu {
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-    }
-
-    // MARK: - Photo Card
-
-    @ViewBuilder
-    private var photoContent: some View {
-        AsyncImage(url: memory.mediaURL ?? URL(string: "about:blank")) { image in
-            image
-                .resizable()
-                .scaledToFill()
-        } placeholder: {
-            Color.mtSurface
-                .frame(height: 240)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 200)
-        .clipped()
-    }
-
-    // MARK: - Voice Card
-
-    @ViewBuilder
-    private var voiceContent: some View {
-        VStack(spacing: Spacing.sm) {
-            if let localURL = localAudioURL {
-                VoicePlayerView(url: localURL)
-            } else {
-                HStack {
-                    Image(systemName: "waveform")
-                        .foregroundStyle(Color.mtSecondary)
-                    Text("Voice clip")
-                        .font(.mtBody)
-                        .foregroundStyle(Color.mtSecondary)
-                    Spacer()
-                    Button("Play") {
-                        Task { await downloadAudio() }
-                    }
-                    .font(.mtCaption)
-                    .foregroundStyle(Color.mtLabel)
-                }
-            }
-        }
-        .padding(Spacing.md)
-    }
-
-    // MARK: - Text Card
-
-    @ViewBuilder
-    private var textContent: some View {
-        Text(memory.caption ?? "")
-            .font(.mtBody)
-            .foregroundStyle(Color.mtLabel)
-            .padding(Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // MARK: - Location Check-in Card
-
-    @ViewBuilder
-    private var locationContent: some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "mappin.circle.fill")
-                .font(.system(size: 32))
-                .foregroundStyle(Color.mtSecondary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(memory.locationName ?? "Somewhere")
-                    .font(.mtBody)
-                    .foregroundStyle(Color.mtLabel)
-                if let caption = memory.caption {
-                    Text(caption)
-                        .font(.mtCaption)
-                        .foregroundStyle(Color.mtSecondary)
-                }
-            }
-            Spacer()
-        }
-        .padding(Spacing.md)
-    }
-
-    private func downloadAudio() async {
-        guard localAudioURL == nil else { return }
-        guard let url = memory.mediaURL,
-              let data = try? await URLSession.shared.data(from: url).0 else { return }
-        let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent(memory.id)
-            .appendingPathExtension("m4a")
-        try? data.write(to: tmp)
-        await MainActor.run { localAudioURL = tmp }
-    }
-}
+// MemoryCardView removed — replaced by TimelineMemoryCard in ConversationTimelineView
