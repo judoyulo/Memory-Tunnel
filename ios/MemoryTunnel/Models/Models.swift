@@ -57,6 +57,10 @@ struct Memory: Codable, Identifiable {
     var mediaType: String          // "photo" | "voice" | "text" | "location_checkin"
     var caption: String?
     var takenAt: Date?
+    var eventDate: String?         // "YYYY-MM-DD" date of the event being described
+    var emotionTags: [String]?     // ["nostalgic", "grateful", ...]
+    var width: Int?                // photo width in pixels (for pre-sizing)
+    var height: Int?               // photo height in pixels (for pre-sizing)
     var visibility: String
     var locationName: String?
     var latitude: Double?
@@ -64,6 +68,12 @@ struct Memory: Codable, Identifiable {
     let createdAt: Date
 
     var isVoice: Bool { mediaType == "voice" }
+
+    /// Aspect ratio for pre-sizing photo frames before AsyncImage loads
+    var aspectRatio: CGFloat? {
+        guard let w = width, let h = height, w > 0, h > 0 else { return nil }
+        return CGFloat(w) / CGFloat(h)
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -73,6 +83,9 @@ struct Memory: Codable, Identifiable {
         case mediaType    = "media_type"
         case caption
         case takenAt      = "taken_at"
+        case eventDate    = "event_date"
+        case emotionTags  = "emotion_tags"
+        case width, height
         case visibility
         case locationName = "location_name"
         case latitude

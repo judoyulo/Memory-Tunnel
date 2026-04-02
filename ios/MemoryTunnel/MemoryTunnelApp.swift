@@ -98,10 +98,11 @@ final class DeepLinkStore: ObservableObject {
 @MainActor
 final class AppState: ObservableObject {
     @Published var currentUser: User?
+    @Published var chapters: [Chapter] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var hasChapters = false
 
+    var hasChapters: Bool { !chapters.isEmpty }
     var isAuthenticated: Bool { currentUser != nil && TokenStore.shared.isAuthenticated }
 
     init() {
@@ -116,9 +117,8 @@ final class AppState: ObservableObject {
         defer { isLoading = false }
         do {
             currentUser = try await APIClient.shared.me()
-            // Check if user has chapters (for Today tab empty state)
-            if let chapters = try? await APIClient.shared.chapters() {
-                hasChapters = !chapters.isEmpty
+            if let loaded = try? await APIClient.shared.chapters() {
+                chapters = loaded
             }
         } catch {
             // Token expired or revoked — force re-auth
@@ -126,8 +126,16 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Call after creating a chapter (e.g., from SmartStart or InviteFlow)
+    func chapterCreated(_ chapter: Chapter) {
+        if !chapters.contains(where: { $0.id == chapter.id }) {
+            chapters.append(chapter)
+        }
+    }
+
     func signOut() {
         TokenStore.shared.token = nil
         currentUser = nil
+        chapters = []
     }
 }

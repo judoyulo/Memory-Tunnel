@@ -77,41 +77,220 @@ struct DailyCardContainerView: View {
                         )
                     )
             } else if !appState.hasChapters {
-                // New user with no chapters: guide them to create one
-                TodayNewUserView()
+                TodayWarmOnrampView()
             } else {
-                DailyCardEmptyView()
+                TodayChapterPreviewsView()
             }
         }
         .task { await vm.load() }
     }
 }
 
-// MARK: - Smart Today: New User State
+// MARK: - State 1: No Chapters — Warm Onramp
 
-struct TodayNewUserView: View {
+struct TodayWarmOnrampView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var showInviteFlow = false
+
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let name = appState.currentUser?.displayName ?? ""
+        let prefix: String
+        switch hour {
+        case 5..<12:  prefix = "Good morning"
+        case 12..<17: prefix = "Good afternoon"
+        default:      prefix = "Good evening"
+        }
+        return name.isEmpty ? prefix : "\(prefix), \(name)"
+    }
+
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
-            Image(systemName: "heart.text.square.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.mtTertiary)
-            Text("Your daily memories\nwill appear here")
-                .font(.mtEmptyTitle)
+
+            Text(greeting)
+                .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
                 .multilineTextAlignment(.center)
-            Text("Start by creating a chapter with\nsomeone you want to stay close to.")
+
+            Image(systemName: "heart.text.square.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.mtAccent)
+
+            Text("Your daily memories start\nwhen you share your first photo.")
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
-            Text("Tap the Chapters tab to begin.")
-                .font(.mtCaption)
-                .foregroundStyle(Color.mtTertiary)
+
+            Button {
+                showInviteFlow = true
+            } label: {
+                Text("Start a chapter")
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtBackground)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.mtLabel)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+            }
+            .padding(.horizontal, Spacing.xl)
+
             Spacer()
             Spacer()
         }
         .padding(Spacing.xl)
+        .sheet(isPresented: $showInviteFlow) {
+            InviteFlowView()
+        }
+    }
+}
+
+// MARK: - State 2: Has Chapters, No Card — Chapter Previews + Quick Send
+
+struct TodayChapterPreviewsView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var showInviteFlow = false
+    @State private var sendChapterID: String?
+
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let name = appState.currentUser?.displayName ?? ""
+        let prefix: String
+        switch hour {
+        case 5..<12:  prefix = "Good morning"
+        case 12..<17: prefix = "Good afternoon"
+        default:      prefix = "Good evening"
+        }
+        return name.isEmpty ? prefix : "\(prefix), \(name)"
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                Text(greeting)
+                    .font(.mtDisplay)
+                    .foregroundStyle(Color.mtLabel)
+                    .padding(.top, Spacing.xl)
+
+                Text("No card today. Send a memory to someone you miss.")
+                    .font(.mtBody)
+                    .foregroundStyle(Color.mtSecondary)
+
+                ForEach(appState.chapters) { chapter in
+                    ChapterPreviewCard(
+                        chapter: chapter,
+                        onSend: { sendChapterID = chapter.id }
+                    )
+                }
+
+                // Add another chapter
+                Button {
+                    showInviteFlow = true
+                } label: {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Start another chapter")
+                            .font(.mtButton)
+                    }
+                    .foregroundStyle(Color.mtLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .stroke(Color.mtLabel, lineWidth: 1.5)
+                    )
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.bottom, Spacing.xl)
+        }
+        .sheet(isPresented: $showInviteFlow) {
+            InviteFlowView()
+        }
+        .sheet(item: Binding(
+            get: { sendChapterID.map { SendChapterID(id: $0) } },
+            set: { sendChapterID = $0?.id }
+        )) { item in
+            SendFlowView(chapterID: item.id)
+        }
+    }
+}
+
+/// Identifiable wrapper for sheet binding
+private struct SendChapterID: Identifiable {
+    let id: String
+}
+
+// MARK: - Chapter Preview Card with Health Dot
+
+struct ChapterPreviewCard: View {
+    let chapter: Chapter
+    let onSend: () -> Void
+
+    private var healthColor: Color {
+        guard let last = chapter.lastMemoryAt else { return Color.mtAccent } // never exchanged = cold
+        let daysSince = Calendar.current.dateComponents([.day], from: last, to: Date()).day ?? 0
+        if daysSince < 30 { return Color(red: 0.298, green: 0.686, blue: 0.475) } // #4CAF79 active
+        if daysSince < 90 { return Color.mtTertiary } // quiet
+        return Color.mtAccent // cold (decay threshold)
+    }
+
+    private var healthLabel: String {
+        guard let last = chapter.lastMemoryAt else { return "No memories yet" }
+        let daysSince = Calendar.current.dateComponents([.day], from: last, to: Date()).day ?? 0
+        if daysSince == 0 { return "Active today" }
+        if daysSince == 1 { return "Last memory yesterday" }
+        return "Last memory \(daysSince) days ago"
+    }
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            // Health dot
+            Circle()
+                .fill(healthColor)
+                .frame(width: 8, height: 8)
+
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(Color.mtSurface)
+                    .frame(width: 44, height: 44)
+                Text(avatarLetter)
+                    .font(.mtLabel)
+                    .foregroundStyle(Color.mtLabel)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(chapter.partner?.displayName ?? chapter.name ?? "Pending")
+                    .font(.mtLabel)
+                    .foregroundStyle(Color.mtLabel)
+                Text(healthLabel)
+                    .font(.mtCaption)
+                    .foregroundStyle(Color.mtSecondary)
+            }
+
+            Spacer()
+
+            Button(action: onSend) {
+                Text("Send")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.mtBackground)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.mtLabel)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color.mtSurface)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+    }
+
+    private var avatarLetter: String {
+        let name = chapter.partner?.displayName ?? chapter.name ?? "?"
+        return String(name.prefix(1).uppercased())
     }
 }
 
@@ -151,7 +330,7 @@ struct DailyCardView: View {
 
                 // Card content
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    // Trigger dot (accent — emotional peak only for birthday/decay)
+                    // Trigger dot (accent — emotional peak: welcome/birthday/decay)
                     if card.triggerType != "manual" {
                         HStack(spacing: Spacing.xs) {
                             Circle()
@@ -205,6 +384,7 @@ struct DailyCardView: View {
 
     private var triggerLabel: String {
         switch card.triggerType {
+        case "welcome":  return "First memory sent"
         case "birthday": return "Birthday today"
         case "decay":    return "It's been a while"
         default:         return ""
@@ -213,26 +393,4 @@ struct DailyCardView: View {
 
 }
 
-// MARK: - Empty State
-
-struct DailyCardEmptyView: View {
-    var body: some View {
-        VStack(spacing: Spacing.lg) {
-            Spacer()
-            Image(systemName: "leaf.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.mtTertiary)
-            Text("All caught up")
-                .font(.mtEmptyTitle)
-                .foregroundStyle(Color.mtLabel)
-            Text("Come back tomorrow.\nYour next memory is waiting.")
-                .font(.mtBody)
-                .foregroundStyle(Color.mtSecondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-            Spacer()
-            Spacer()
-        }
-        .padding(Spacing.xl)
-    }
-}
+// DailyCardEmptyView removed — replaced by TodayChapterPreviewsView (State 2)
