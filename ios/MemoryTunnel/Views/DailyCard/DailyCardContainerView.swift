@@ -18,7 +18,11 @@ final class DailyCardViewModel: ObservableObject {
             card = try await APIClient.shared.dailyCard()
             updateWidgetData()
         } catch {
-            errorMessage = error.localizedDescription
+            // Don't show error for decoding failures or network issues.
+            // The Today tab has useful fallback states (chapter previews, warm onramp).
+            // Only surface errors that indicate a real auth problem.
+            print("[DailyCard] load failed: \(error)")
+            card = nil
         }
     }
 
