@@ -225,10 +225,28 @@ final class VoiceRecorderViewModel: ObservableObject {
         defer { isUploading = false }
 
         do {
-            try await VoiceMemoryService.shared.uploadVoiceClip(
-                fileURL: url,
+            // 1. Presign: get S3 upload URL
+            let presign = try await APIClient.shared.presign(chapterID: chapterID, contentType: "audio/mp4")
+
+            // 2. Upload to S3
+            let audioData = try Data(contentsOf: url)
+            var request = URLRequest(url: presign.uploadURL)
+            request.httpMethod = "PUT"
+            request.setValue("audio/mp4", forHTTPHeaderField: "Content-Type")
+            request.httpBody = audioData
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                return
+            }
+
+            // 3. Create memory record
+            _ = try await APIClient.shared.createMemory(
                 chapterID: chapterID,
-                caption: caption.isEmpty ? nil : caption
+                s3Key: presign.s3Key,
+                caption: caption.isEmpty ? nil : caption,
+                takenAt: nil,
+                visibility: "this_item",
+                mediaType: "voice"
             )
         } catch {
             // Upload failure handled by caller
