@@ -121,7 +121,8 @@ actor APIClient {
 
     func createMemory(chapterID: String, s3Key: String, caption: String?, takenAt: Date?,
                       visibility: String, mediaType: String = "photo",
-                      locationName: String? = nil, latitude: Double? = nil, longitude: Double? = nil) async throws -> Memory {
+                      locationName: String? = nil, latitude: Double? = nil, longitude: Double? = nil,
+                      width: Int? = nil, height: Int? = nil) async throws -> Memory {
         var body: [String: String] = ["s3_key": s3Key, "visibility": visibility, "media_type": mediaType]
         if let c = caption { body["caption"] = c }
         if let t = takenAt {
@@ -131,6 +132,8 @@ actor APIClient {
         if let l = locationName { body["location_name"] = l }
         if let lat = latitude   { body["latitude"] = String(lat) }
         if let lon = longitude  { body["longitude"] = String(lon) }
+        if let w = width        { body["width"] = String(w) }
+        if let h = height       { body["height"] = String(h) }
         return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
     }
 

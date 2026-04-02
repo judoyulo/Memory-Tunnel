@@ -73,6 +73,14 @@ struct JournalEntryCard: View {
         }
         .background(Color.mtSurface)
         .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+        .overlay(alignment: .leading) {
+            // Sender color bar: accent for partner, label for you
+            let isOwn = memory.ownerID == currentUserID
+            RoundedRectangle(cornerRadius: Radius.card)
+                .fill(isOwn ? Color.mtLabel.opacity(0.15) : Color.mtAccent.opacity(0.4))
+                .frame(width: 3)
+                .padding(.vertical, 4)
+        }
         .onLongPressGesture { onEdit() }
         .contextMenu {
             Button { onEdit() } label: {
@@ -110,33 +118,41 @@ struct JournalEntryCard: View {
         return "— \(partnerName ?? "them")"
     }
 
-    // MARK: - Photo (thumbnail + caption side by side)
+    // MARK: - Photo (prominent image with overlay metadata)
 
     @ViewBuilder
     private var photoContent: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Button(action: onTapPhoto) {
+        Button(action: onTapPhoto) {
+            ZStack(alignment: .bottomLeading) {
                 AsyncImage(url: memory.mediaURL) { image in
                     image
                         .resizable()
                         .scaledToFill()
                 } placeholder: {
-                    Color.mtBackground
+                    Color.mtSurface
                 }
-                .frame(width: 80, height: 80)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-            .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .frame(height: 200)
+                .clipped()
 
-            if let caption = memory.caption, !caption.isEmpty {
-                Text(caption)
-                    .font(.mtBody)
-                    .foregroundStyle(Color.mtLabel)
-                    .lineLimit(4)
+                // Gradient + caption overlay (only if caption exists)
+                if let caption = memory.caption, !caption.isEmpty {
+                    LinearGradient(
+                        colors: [.clear, Color.black.opacity(0.5)],
+                        startPoint: .center,
+                        endPoint: .bottom
+                    )
+
+                    Text(caption)
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
+                }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .buttonStyle(.plain)
     }
 
     // MARK: - Voice
@@ -156,19 +172,25 @@ struct JournalEntryCard: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Text
+    // MARK: - Text (warm tinted background for visual distinction)
 
     @ViewBuilder
     private var textContent: some View {
         VStack(alignment: .leading, spacing: 4) {
+            Text("\u{201C}") // opening quote mark
+                .font(.system(size: 32, design: .serif))
+                .foregroundStyle(Color.mtAccent.opacity(0.4))
+                .padding(.bottom, -16)
+
             Text(memory.caption ?? "")
-                .font(.system(size: 16, design: .serif))
+                .font(.system(size: 17, design: .serif))
                 .italic()
                 .foregroundStyle(Color.mtLabel)
+                .lineSpacing(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Location check-in

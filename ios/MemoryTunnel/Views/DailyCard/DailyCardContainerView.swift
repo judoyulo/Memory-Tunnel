@@ -208,7 +208,7 @@ struct TodayChapterPreviewsView: View {
                 }
             }
             .padding(.horizontal, Spacing.md)
-            .padding(.bottom, Spacing.xl)
+            .padding(.bottom, 80) // Extra padding to clear the tab bar
         }
         .sheet(isPresented: $showInviteFlow) {
             InviteFlowView()

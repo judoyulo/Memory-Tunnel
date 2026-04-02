@@ -157,10 +157,9 @@ struct ChapterDetailView: View {
             MemoryEditSheet(
                 memory: memory,
                 chapterID: chapter.id,
-                onSave: { updated in
-                    if let idx = vm.memories.firstIndex(where: { $0.id == updated.id }) {
-                        vm.memories[idx] = updated
-                    }
+                onSave: { _ in
+                    // Reload from server to get correct sort order after date edit
+                    Task { await vm.load() }
                 },
                 onDelete: {
                     Task { await vm.deleteMemory(memory) }

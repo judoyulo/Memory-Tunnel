@@ -1,5 +1,7 @@
 import SwiftUI
 import PhotosUI
+import CoreLocation
+import ImageIO
 
 // MARK: - ViewModel
 
@@ -15,6 +17,14 @@ final class SendFlowViewModel: ObservableObject {
     @Published var caption: String = ""
     @Published var visibility: String = "this_item"   // default: explicitly shared
 
+    // EXIF metadata prefilled from photo
+    @Published var locationName: String = ""
+    @Published var eventDate: Date?
+    @Published var emotionTags: Set<String> = []
+    @Published var photoWidth: Int?
+    @Published var photoHeight: Int?
+    private var photoTakenAt: Date?
+
     let chapterID: String
     var createdInvitation: Invitation?
 
@@ -28,10 +38,52 @@ final class SendFlowViewModel: ObservableObject {
               let image = UIImage(data: data) else { return }
 
         selectedImage = image
+        photoWidth = Int(image.size.width * image.scale)
+        photoHeight = Int(image.size.height * image.scale)
         step = .addCaption
+
+        // Extract EXIF metadata (creation date + location) from the photo
+        await extractPhotoMetadata(from: data)
 
         // On-device face detection (async, non-blocking)
         detectedFaces = await FaceDetectionService.detectFaces(in: image)
+    }
+
+    /// Read EXIF/IPTC metadata from photo data to prefill date and location
+    private func extractPhotoMetadata(from data: Data) async {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { return }
+
+        // Extract date from EXIF
+        if let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
+           let dateStr = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+            if let date = formatter.date(from: dateStr) {
+                photoTakenAt = date
+                eventDate = date
+            }
+        }
+
+        // Extract GPS location
+        if let gps = properties[kCGImagePropertyGPSDictionary as String] as? [String: Any] {
+            var lat = gps[kCGImagePropertyGPSLatitude as String] as? Double ?? 0
+            var lng = gps[kCGImagePropertyGPSLongitude as String] as? Double ?? 0
+            if let latRef = gps[kCGImagePropertyGPSLatitudeRef as String] as? String, latRef == "S" { lat = -lat }
+            if let lngRef = gps[kCGImagePropertyGPSLongitudeRef as String] as? String, lngRef == "W" { lng = -lng }
+
+            if lat != 0 || lng != 0 {
+                // Reverse geocode to get a place name
+                let geocoder = CLGeocoder()
+                let location = CLLocation(latitude: lat, longitude: lng)
+                if let placemark = try? await geocoder.reverseGeocodeLocation(location).first {
+                    let parts = [placemark.locality, placemark.country].compactMap { $0 }
+                    if !parts.isEmpty {
+                        locationName = parts.joined(separator: ", ")
+                    }
+                }
+            }
+        }
     }
 
     func send() async {
@@ -50,13 +102,16 @@ final class SendFlowViewModel: ObservableObject {
             // 2. Upload directly to S3 (no server traffic)
             try await APIClient.shared.uploadToS3(data: data, presign: presign)
 
-            // 3. Create the Memory record
+            // 3. Create the Memory record (with EXIF-prefilled metadata)
             let memory = try await APIClient.shared.createMemory(
-                chapterID:  chapterID,
-                s3Key:      presign.s3Key,
-                caption:    caption.isEmpty ? nil : caption,
-                takenAt:    nil,
-                visibility: visibility
+                chapterID:    chapterID,
+                s3Key:        presign.s3Key,
+                caption:      caption.isEmpty ? nil : caption,
+                takenAt:      photoTakenAt,
+                visibility:   visibility,
+                locationName: locationName.isEmpty ? nil : locationName,
+                width:        photoWidth,
+                height:       photoHeight
             )
 
             // 4. Create invitation (generates share URL for Branch.io)
@@ -156,19 +211,20 @@ struct CaptionStep: View {
     @FocusState private var captionFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
+        ScrollView {
+            VStack(spacing: 0) {
             // Preview
             if let image = vm.selectedImage {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 320)
+                    .frame(height: 240)
                     .clipped()
                     .overlay(FaceOverlayView(faces: vm.detectedFaces))
             }
 
-            // Caption input
+            // Caption input + metadata
             VStack(alignment: .leading, spacing: Spacing.md) {
                 TextField("Add a caption… (optional)", text: $vm.caption, axis: .vertical)
                     .font(.mtBody)
@@ -178,6 +234,13 @@ struct CaptionStep: View {
                     .padding(Spacing.md)
                     .background(Color.mtSurface)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+
+                // Metadata (prefilled from EXIF)
+                MemoryMetadataFields(
+                    locationName: $vm.locationName,
+                    eventDate: $vm.eventDate,
+                    emotionTags: $vm.emotionTags
+                )
 
                 // Visibility toggle
                 HStack {
@@ -207,8 +270,7 @@ struct CaptionStep: View {
                 }
             }
             .padding(Spacing.md)
-
-            Spacer()
+            }
         }
     }
 }
