@@ -101,18 +101,19 @@ struct MemoryEditSheet: View {
         defer { isSaving = false }
 
         do {
-            let updated = try await APIClient.shared.updateMemory(
+            _ = try await APIClient.shared.updateMemory(
                 chapterID: chapterID,
                 memoryID: memory.id,
-                caption: caption.isEmpty ? nil : caption,
+                caption: caption,
                 locationName: locationName.isEmpty ? nil : locationName,
                 eventDate: eventDate,
                 emotionTags: Array(emotionTags)
             )
-            onSave(updated)
+            // Reload from server to get correct data + sort order
+            onSave(memory) // trigger reload
             dismiss()
         } catch {
-            // Error handling: stay on sheet, user can retry
+            print("[MemoryEditSheet] save error: \(error)")
         }
     }
 

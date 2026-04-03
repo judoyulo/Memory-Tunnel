@@ -44,10 +44,8 @@ final class ChapterDetailViewModel: ObservableObject {
 
     func updateCaption(memory: Memory, caption: String) async {
         do {
-            let updated = try await APIClient.shared.updateMemory(chapterID: chapterID, memoryID: memory.id, caption: caption)
-            if let index = memories.firstIndex(where: { $0.id == updated.id }) {
-                memories[index] = updated
-            }
+            try await APIClient.shared.updateMemory(chapterID: chapterID, memoryID: memory.id, caption: caption)
+            await load() // reload for fresh data
         } catch {
             errorMessage = error.localizedDescription
         }

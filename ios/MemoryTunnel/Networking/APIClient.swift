@@ -169,9 +169,10 @@ actor APIClient {
 
     func updateMemory(chapterID: String, memoryID: String, caption: String?,
                       locationName: String? = nil, eventDate: Date? = nil,
-                      emotionTags: [String]? = nil) async throws -> Memory {
+                      emotionTags: [String]? = nil) async throws {
         var body: [String: Any] = [:]
-        if let c = caption { body["caption"] = c }
+        // Always send caption (even empty string) so user can clear it
+        body["caption"] = caption ?? ""
         if let l = locationName { body["location_name"] = l }
         if let d = eventDate {
             let formatter = DateFormatter()
@@ -181,12 +182,13 @@ actor APIClient {
             let iso = ISO8601DateFormatter()
             body["taken_at"] = iso.string(from: d)
         }
-        if let tags = emotionTags { body["emotion_tags"] = tags }
+        body["emotion_tags"] = emotionTags ?? []
 
         var req = try buildRequest(method: "PATCH", path: "/api/v1/chapters/\(chapterID)/memories/\(memoryID)")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        return try await perform(req)
+        // Don't decode response — caller reloads from server for fresh data
+        try await performVoid(req)
     }
 
     func deleteMemory(chapterID: String, memoryID: String) async throws {

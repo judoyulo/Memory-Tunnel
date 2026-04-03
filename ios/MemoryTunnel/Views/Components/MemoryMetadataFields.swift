@@ -41,7 +41,7 @@ struct MemoryMetadataFields: View {
                     .foregroundStyle(Color.mtTertiary)
 
                 Button {
-                    if eventDate == nil { eventDate = Date() }
+                    if eventDate == nil { eventDate = Calendar.current.startOfDay(for: Date()) }
                     showDatePicker.toggle()
                 } label: {
                     HStack(spacing: Spacing.xs) {

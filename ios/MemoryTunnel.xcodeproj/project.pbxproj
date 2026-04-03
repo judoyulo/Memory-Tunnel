@@ -97,7 +97,7 @@
 		D821FFD559B90C5B72F78888 /* FaceScanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceScanSheet.swift; sourceTree = "<group>"; };
 		DBCB7F0577C7E7795737722A /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		E582EDFACC333CDF2C4F7EED /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
-		E78CD8E3F994E55AD801203C /* MemoryTunnel.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MemoryTunnel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E78CD8E3F994E55AD801203C /* MemoryTunnel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MemoryTunnel.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE06847419A79BDE2DE826FB /* DailyCardContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyCardContainerView.swift; sourceTree = "<group>"; };
 		F1D810DCD3E7732FCB967BAC /* ChapterCreationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterCreationViewModel.swift; sourceTree = "<group>"; };
 		FB76E740968FA6326B7AB5C0 /* BirthdayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayService.swift; sourceTree = "<group>"; };
@@ -404,7 +404,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					111A2F5F2D5A3881A8DF721F = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -499,6 +498,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V95ARSBBXT;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MemoryTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -538,6 +538,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V95ARSBBXT;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MemoryTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
