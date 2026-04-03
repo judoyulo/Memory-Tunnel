@@ -49,7 +49,17 @@ struct PartnerStub: Codable, Hashable {
 
 // MARK: - Memory
 
-struct Memory: Codable, Identifiable {
+struct Memory: Codable, Identifiable, Equatable {
+    static func == (lhs: Memory, rhs: Memory) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.caption == rhs.caption &&
+        lhs.eventDate == rhs.eventDate &&
+        lhs.emotionTags == rhs.emotionTags &&
+        lhs.locationName == rhs.locationName &&
+        lhs.takenAt == rhs.takenAt &&
+        lhs.mediaType == rhs.mediaType
+    }
+
     let id: String
     let chapterID: String
     let ownerID: String
