@@ -62,7 +62,7 @@ struct ConversationTimelineView: View {
                                 onEdit: { onEdit(memory) },
                                 onDelete: { onDelete(memory) }
                             )
-                            .id(memory.id)
+                            .id("\(memory.id)-\(memory.eventDate ?? "")-\(memory.caption ?? "")")
                         }
                     }
                 }
@@ -71,9 +71,10 @@ struct ConversationTimelineView: View {
                 .padding(.bottom, 80)
             }
             .onAppear {
-                if let lastID = memories.last?.id {
+                if let last = memories.last {
+                    let scrollID = "\(last.id)-\(last.eventDate ?? "")-\(last.caption ?? "")"
                     DispatchQueue.main.async {
-                        proxy.scrollTo(lastID, anchor: .bottom)
+                        proxy.scrollTo(scrollID, anchor: .bottom)
                     }
                 }
             }
