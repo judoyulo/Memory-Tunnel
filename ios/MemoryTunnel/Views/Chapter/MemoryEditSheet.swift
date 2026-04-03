@@ -25,7 +25,9 @@ struct MemoryEditSheet: View {
         self.onDelete = onDelete
         _caption = State(initialValue: memory.caption ?? "")
         _locationName = State(initialValue: memory.locationName ?? "")
-        _eventDate = State(initialValue: Self.parseEventDate(memory.eventDate))
+        // Prefill date: prefer event_date, fall back to taken_at
+        let date = Self.parseEventDate(memory.eventDate) ?? memory.takenAt
+        _eventDate = State(initialValue: date)
         _emotionTags = State(initialValue: Set(memory.emotionTags ?? []))
     }
 

@@ -177,6 +177,9 @@ actor APIClient {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
             body["event_date"] = formatter.string(from: d)
+            // Also update taken_at so server sort (COALESCE(taken_at, created_at)) reflects the edit
+            let iso = ISO8601DateFormatter()
+            body["taken_at"] = iso.string(from: d)
         }
         if let tags = emotionTags { body["emotion_tags"] = tags }
 
