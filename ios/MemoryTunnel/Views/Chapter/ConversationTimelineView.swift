@@ -24,14 +24,14 @@ struct ConversationTimelineView: View {
         formatter.dateFormat = "MMMM yyyy"
 
         let grouped = Dictionary(grouping: memories) { memory -> String in
-            let date = memory.takenAt ?? memory.createdAt
+            let date = memory.displayDate
             return formatter.string(from: date)
         }
 
         var seen = Set<String>()
         var result: [(key: String, memories: [Memory])] = []
         for memory in memories {
-            let date = memory.takenAt ?? memory.createdAt
+            let date = memory.displayDate
             let key = formatter.string(from: date)
             if !seen.contains(key) {
                 seen.insert(key)

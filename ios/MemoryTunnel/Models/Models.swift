@@ -69,6 +69,17 @@ struct Memory: Codable, Identifiable {
 
     var isVoice: Bool { mediaType == "voice" }
 
+    /// The single source-of-truth date for display and sorting.
+    /// Prefers event_date (parsed from "yyyy-MM-dd"), then taken_at, then created_at.
+    var displayDate: Date {
+        if let str = eventDate {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            if let d = f.date(from: str) { return d }
+        }
+        return takenAt ?? createdAt
+    }
+
     /// Aspect ratio for pre-sizing photo frames before AsyncImage loads
     var aspectRatio: CGFloat? {
         guard let w = width, let h = height, w > 0, h > 0 else { return nil }

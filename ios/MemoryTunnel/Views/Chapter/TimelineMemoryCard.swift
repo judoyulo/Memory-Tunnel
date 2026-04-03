@@ -95,19 +95,10 @@ struct JournalEntryCard: View {
     // MARK: - Date text
 
     private var dateText: String {
-        // Prefer event_date, then taken_at, then created_at
         let formatter = DateFormatter()
         formatter.dateStyle = .long
         formatter.timeStyle = .none
-
-        if let eventDateStr = memory.eventDate {
-            let parser = DateFormatter()
-            parser.dateFormat = "yyyy-MM-dd"
-            if let parsed = parser.date(from: eventDateStr) {
-                return formatter.string(from: parsed)
-            }
-        }
-        return formatter.string(from: memory.takenAt ?? memory.createdAt)
+        return formatter.string(from: memory.displayDate)
     }
 
     // MARK: - Sender label
