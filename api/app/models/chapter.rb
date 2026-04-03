@@ -36,14 +36,14 @@ class Chapter < ApplicationRecord
 
     # Pending chapters (no partner yet): show only the creator's own memories.
     unless other
-      return own_memories.order(Arel.sql("COALESCE(taken_at, created_at) ASC"))
+      return own_memories.order(Arel.sql("COALESCE(event_date::timestamp, taken_at, created_at) ASC"))
     end
 
     # Active chapters: show user's own + partner's memories with visible visibility.
     their_memories = memories.where(owner: other, visibility: %w[all this_item])
 
     Memory.where(id: own_memories).or(Memory.where(id: their_memories))
-          .order(Arel.sql("COALESCE(taken_at, created_at) ASC"))
+          .order(Arel.sql("COALESCE(event_date::timestamp, taken_at, created_at) ASC"))
   end
 
   def other_member(user)
