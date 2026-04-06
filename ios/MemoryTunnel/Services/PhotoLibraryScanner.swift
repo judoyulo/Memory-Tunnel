@@ -1,22 +1,31 @@
 // PhotoLibraryScanner.swift
 // Scans the user's photo library on-device to find frequently-appearing faces.
+// Uses MobileFaceNet (via FaceEmbeddingService) for identity-grade face embeddings.
 // All processing stays on-device — no biometric data, face crops, or embeddings
 // are ever sent to the server.
 //
-// Usage: call scanFacesProgressively() for the new bubble onboarding (streams results
-// as faces are discovered). Legacy scanForFrequentFaces() still available.
+// Scan strategy:
+//   - Random sampling from full library (not most-recent-first) for broad coverage
+//   - Adaptive: scans at least 500 photos, extends until 20+ clusters or library exhausted
+//   - .highQualityFormat at 1024px for reliable face detection and embedding quality
+//   - 60-second deadline with 5-second per-image timeout
+//   - Centroid-based clustering with post-merge pass
+//   - Progressive UI updates via AsyncStream
 
 import Photos
 import UIKit
+import os.log
+
+private let logger = Logger(subsystem: "com.memorytunnel.app", category: "PhotoScanner")
 
 // MARK: - FaceSuggestion
 
 struct FaceSuggestion: Identifiable {
-    let id: UUID               // local cluster ID (not persisted to FaceIndexService)
-    let sampleCrop: UIImage    // best crop from the most-recent photo containing this face
-    let recentAssets: [PHAsset] // all assets where this face was detected (for picker)
-    let count: Int             // number of photos containing this face (for bubble sizing)
-    var name: String = ""      // user-supplied name, filled in onboarding
+    let id: UUID
+    let sampleCrop: UIImage
+    let recentAssets: [PHAsset]
+    let count: Int
+    var name: String = ""
 }
 
 // MARK: - PhotoLibraryScanner
@@ -34,14 +43,16 @@ actor PhotoLibraryScanner {
         return await PHPhotoLibrary.requestAuthorization(for: .readWrite)
     }
 
-    // MARK: - Progressive Scan (for face bubbles)
+    // MARK: - Progressive Scan
 
     /// Streams face suggestions as they are discovered during scanning.
-    /// Bubbles appear progressively in the UI, biggest first.
-    /// Scans up to `limit` photos, emits clusters with >= `minAppearances`, max `maxFaces`.
+    /// Uses MobileFaceNet embeddings for identity matching.
+    /// Adaptive: scans at least `minPhotos`, extends until `targetClusters` or library exhausted.
     func scanFacesProgressively(
-        limit: Int = 500,
-        maxFaces: Int = 30,
+        minPhotos: Int = 500,
+        maxPhotos: Int = 5000,
+        targetClusters: Int = 20,
+        maxFaces: Int = 50,
         minAppearances: Int = 2
     ) -> AsyncStream<[FaceSuggestion]> {
         AsyncStream { continuation in
@@ -52,13 +63,13 @@ actor PhotoLibraryScanner {
                     return
                 }
 
+                // Fetch ALL photo assets for random sampling
                 let fetchOptions = PHFetchOptions()
                 fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-                fetchOptions.fetchLimit = limit
-                let assets = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+                let allAssets = PHAsset.fetchAssets(with: .image, options: fetchOptions)
 
                 var assetList: [PHAsset] = []
-                assets.enumerateObjects { asset, _, _ in
+                allAssets.enumerateObjects { asset, _, _ in
                     assetList.append(asset)
                 }
 
@@ -67,47 +78,77 @@ actor PhotoLibraryScanner {
                     return
                 }
 
-                var clusters: [LocalCluster] = []
-                let threshold = FaceIndexService.clusterThreshold
-                let deadline = Date().addingTimeInterval(10)
+                // Random shuffle for broad coverage across time periods
+                assetList.shuffle()
 
-                // Emit snapshot every N photos processed
+                // Cap at maxPhotos
+                if assetList.count > maxPhotos {
+                    assetList = Array(assetList.prefix(maxPhotos))
+                }
+
+                let scanStart = Date()
+                let deadline = scanStart.addingTimeInterval(60)
+
+                var clusters: [LocalCluster] = []
                 var photosSinceLastEmit = 0
-                let emitInterval = 15
+                let emitInterval = 5
+                var photosProcessed = 0
+                var facesDetected = 0
+                var facesAligned = 0
 
                 for (index, asset) in assetList.enumerated() {
+                    // Check deadline
                     if Date() > deadline { break }
 
-                    if index % 10 == 0 {
+                    // Check if we have enough clusters and processed minimum
+                    let clusterCount = clusters.filter { $0.count >= minAppearances }.count
+                    if photosProcessed >= minPhotos && clusterCount >= targetClusters { break }
+
+                    if index % 5 == 0 {
                         await Task.yield()
                         if Task.isCancelled { break }
                     }
 
-                    guard let image = await loadImage(for: asset, targetSize: 512) else { continue }
-                    let descriptors = await FaceIndexService.shared.detectDescriptors(in: image)
+                    // Load image at high quality for reliable face detection
+                    guard let image = await loadImage(for: asset, targetSize: 1024) else { continue }
+                    guard let cgImage = image.cgImage else { continue }
+                    photosProcessed += 1
 
-                    for (descriptor, crop) in descriptors {
+                    // Detect faces + generate embeddings
+                    let observations = await FaceEmbeddingService.shared.detectFaces(in: cgImage)
+                    guard !observations.isEmpty else { continue }
+
+                    for obs in observations {
+                        guard let result = await FaceEmbeddingService.shared.embedding(
+                            for: obs, in: cgImage
+                        ) else { continue }
+
+                        facesDetected += 1
+                        if result.method == .aligned { facesAligned += 1 }
+
+                        // Centroid-based clustering
                         var bestIdx: Int?
-                        var bestDist = Float.infinity
+                        var bestSim: Float = -1
                         for (i, cluster) in clusters.enumerated() {
-                            let dist = FaceIndexService.shared.l2Distance(descriptor, cluster.descriptor)
-                            if dist < bestDist {
-                                bestDist = dist
-                                bestIdx = i
-                            }
+                            let sim = FaceEmbeddingService.shared.cosineSimilarity(
+                                result.embedding, cluster.centroid
+                            )
+                            if sim > bestSim { bestSim = sim; bestIdx = i }
                         }
 
-                        if let idx = bestIdx, bestDist <= threshold {
+                        if let idx = bestIdx, bestSim >= FaceEmbeddingService.matchThreshold {
                             clusters[idx].count += 1
                             clusters[idx].assets.append(asset)
-                            if clusters[idx].bestCrop == nil { clusters[idx].bestCrop = crop }
+                            clusters[idx].addEmbedding(result.embedding)
+                            if clusters[idx].bestCrop == nil { clusters[idx].bestCrop = result.crop }
                         } else {
                             clusters.append(LocalCluster(
-                                id:         UUID(),
-                                descriptor: descriptor,
-                                count:      1,
-                                bestCrop:   crop,
-                                assets:     [asset]
+                                id: UUID(),
+                                centroid: result.embedding,
+                                embeddingSum: result.embedding,
+                                count: 1,
+                                bestCrop: result.crop,
+                                assets: [asset]
                             ))
                         }
                     }
@@ -115,6 +156,8 @@ actor PhotoLibraryScanner {
                     photosSinceLastEmit += 1
                     if photosSinceLastEmit >= emitInterval {
                         photosSinceLastEmit = 0
+                        // Post-merge before emitting
+                        mergeClusters(&clusters)
                         let snapshot = buildSuggestions(from: clusters, minAppearances: minAppearances, maxFaces: maxFaces)
                         if !snapshot.isEmpty {
                             continuation.yield(snapshot)
@@ -122,8 +165,16 @@ actor PhotoLibraryScanner {
                     }
                 }
 
-                // Final emit
+                // Final merge + emit
+                mergeClusters(&clusters)
                 let final = buildSuggestions(from: clusters, minAppearances: minAppearances, maxFaces: maxFaces)
+
+                // Log scan summary
+                let elapsed = Date().timeIntervalSince(scanStart)
+                let clusterCount = final.count
+                let alignPct = facesDetected > 0 ? Int(Double(facesAligned) / Double(facesDetected) * 100) : 0
+                logger.info("Scan complete: \(photosProcessed) photos, \(facesDetected) faces (\(alignPct)% aligned), \(clusterCount) clusters, \(String(format: "%.1f", elapsed))s")
+
                 continuation.yield(final)
                 continuation.finish()
             }
@@ -137,70 +188,67 @@ actor PhotoLibraryScanner {
         let status = await requestAccess()
         guard status == .authorized || status == .limited else { return [] }
 
-        let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        fetchOptions.fetchLimit = limit
-        let assets = PHAsset.fetchAssets(with: .image, options: fetchOptions)
-
-        var assetList: [PHAsset] = []
-        assets.enumerateObjects { asset, _, _ in
-            assetList.append(asset)
+        var results: [FaceSuggestion] = []
+        let stream = scanFacesProgressively(minPhotos: limit, maxPhotos: limit, maxFaces: topN)
+        for await snapshot in stream {
+            results = snapshot
         }
-
-        guard !assetList.isEmpty else { return [] }
-
-        var clusters: [LocalCluster] = []
-        let threshold = FaceIndexService.clusterThreshold
-        let deadline = Date().addingTimeInterval(10)
-
-        for (index, asset) in assetList.enumerated() {
-            if Date() > deadline { break }
-            if index % 10 == 0 {
-                await Task.yield()
-                if Task.isCancelled { break }
-            }
-
-            guard let image = await loadImage(for: asset, targetSize: 512) else { continue }
-            let descriptors = await FaceIndexService.shared.detectDescriptors(in: image)
-
-            for (descriptor, crop) in descriptors {
-                var bestIdx: Int?
-                var bestDist = Float.infinity
-                for (i, cluster) in clusters.enumerated() {
-                    let dist = FaceIndexService.shared.l2Distance(descriptor, cluster.descriptor)
-                    if dist < bestDist {
-                        bestDist = dist
-                        bestIdx = i
-                    }
-                }
-
-                if let idx = bestIdx, bestDist <= threshold {
-                    clusters[idx].count += 1
-                    clusters[idx].assets.append(asset)
-                    if clusters[idx].bestCrop == nil { clusters[idx].bestCrop = crop }
-                } else {
-                    clusters.append(LocalCluster(
-                        id:         UUID(),
-                        descriptor: descriptor,
-                        count:      1,
-                        bestCrop:   crop,
-                        assets:     [asset]
-                    ))
-                }
-            }
-        }
-
-        return buildSuggestions(from: clusters, minAppearances: 2, maxFaces: topN)
+        return results
     }
 
     // MARK: - Private
 
     private struct LocalCluster {
         let id: UUID
-        let descriptor: [Float]
+        var centroid: [Float]       // L2-normalized average embedding
+        var embeddingSum: [Float]   // Running sum for centroid calculation
         var count: Int
         var bestCrop: UIImage?
         var assets: [PHAsset]
+
+        mutating func addEmbedding(_ emb: [Float]) {
+            for i in 0 ..< embeddingSum.count { embeddingSum[i] += emb[i] }
+            // Recompute centroid: average then L2-normalize
+            var avg = embeddingSum.map { $0 / Float(count) }
+            var norm: Float = 0
+            for x in avg { norm += x * x }
+            norm = norm.squareRoot()
+            if norm > 0 { avg = avg.map { $0 / norm } }
+            centroid = avg
+        }
+    }
+
+    /// Post-clustering merge: merge clusters whose centroids are similar.
+    private func mergeClusters(_ clusters: inout [LocalCluster]) {
+        var merged = true
+        while merged {
+            merged = false
+            for i in 0 ..< clusters.count {
+                for j in (i + 1) ..< clusters.count {
+                    let sim = FaceEmbeddingService.shared.cosineSimilarity(
+                        clusters[i].centroid, clusters[j].centroid
+                    )
+                    if sim >= FaceEmbeddingService.mergeThreshold {
+                        clusters[i].count += clusters[j].count
+                        clusters[i].assets.append(contentsOf: clusters[j].assets)
+                        for k in 0 ..< clusters[i].embeddingSum.count {
+                            clusters[i].embeddingSum[k] += clusters[j].embeddingSum[k]
+                        }
+                        // Recompute centroid
+                        var avg = clusters[i].embeddingSum.map { $0 / Float(clusters[i].count) }
+                        var norm: Float = 0
+                        for x in avg { norm += x * x }
+                        norm = norm.squareRoot()
+                        if norm > 0 { avg = avg.map { $0 / norm } }
+                        clusters[i].centroid = avg
+                        clusters.remove(at: j)
+                        merged = true
+                        break
+                    }
+                }
+                if merged { break }
+            }
+        }
     }
 
     private func buildSuggestions(from clusters: [LocalCluster], minAppearances: Int, maxFaces: Int) -> [FaceSuggestion] {
@@ -223,18 +271,28 @@ actor PhotoLibraryScanner {
         await withCheckedContinuation { continuation in
             let size = CGSize(width: targetSize, height: targetSize)
             let options = PHImageRequestOptions()
-            options.deliveryMode = .opportunistic
-            options.resizeMode = .fast
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .exact
             options.isSynchronous = false
             options.isNetworkAccessAllowed = false
 
             var resumed = false
+
+            // 5-second per-image timeout
+            let timeoutWork = DispatchWorkItem {
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: nil)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: timeoutWork)
+
             PHImageManager.default().requestImage(
                 for: asset,
                 targetSize: size,
                 contentMode: .aspectFit,
                 options: options
             ) { image, info in
+                timeoutWork.cancel()
                 guard !resumed else { return }
                 let isInCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
                 if isInCloud {
