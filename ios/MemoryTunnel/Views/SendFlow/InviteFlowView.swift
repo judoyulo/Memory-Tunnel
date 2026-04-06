@@ -91,7 +91,7 @@ final class InviteFlowViewModel: ObservableObject {
             step = .done
 
             // Fire-and-forget: index faces in the uploaded photo for the tagging prompt queue.
-            Task { await FaceIndexService.shared.processFaces(in: image) }
+            Task { await FaceEmbeddingService.shared.processFaces(in: image) }
         } catch {
             step = .error(error.localizedDescription)
         }

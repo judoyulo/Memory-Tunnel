@@ -25,6 +25,7 @@ final class ChapterListViewModel: ObservableObject {
         do {
             try await APIClient.shared.deleteChapter(id: chapter.id)
             chapters.removeAll { $0.id == chapter.id }
+            NotificationCenter.default.post(name: .chapterDeleted, object: nil, userInfo: ["chapterID": chapter.id])
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -36,9 +37,10 @@ struct ChapterListView: View {
     @EnvironmentObject var router: NotificationRouter
     @State private var showInviteFlow = false
     @State private var showFaceScan = false
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 Color.mtBackground.ignoresSafeArea()
 
@@ -110,6 +112,35 @@ struct ChapterListView: View {
             }
             .task { await vm.load() }
             .refreshable { await vm.load() }
+            .onAppear { navigateToPendingChapter() }
+            .onChange(of: router.pendingChapterID) { _, _ in navigateToPendingChapter() }
+        }
+    }
+
+    private func navigateToPendingChapter() {
+        guard let chapterID = router.pendingChapterID else { return }
+
+        // Always pop to root first
+        navigationPath = NavigationPath()
+
+        Task {
+            // Wait for pop animation + tab switch to fully settle
+            try? await Task.sleep(nanoseconds: 500_000_000)
+
+            // Ensure chapters are loaded
+            if vm.chapters.isEmpty { await vm.load() }
+
+            // Find and navigate
+            if let chapter = vm.chapters.first(where: { $0.id == chapterID }) {
+                navigationPath.append(chapter)
+            } else {
+                // Chapter not in list — reload
+                await vm.load()
+                if let chapter = vm.chapters.first(where: { $0.id == chapterID }) {
+                    navigationPath.append(chapter)
+                }
+            }
+            router.pendingChapterID = nil
         }
     }
 }

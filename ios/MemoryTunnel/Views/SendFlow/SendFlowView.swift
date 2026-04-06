@@ -123,7 +123,7 @@ final class SendFlowViewModel: ObservableObject {
             step = .sent
 
             // Fire-and-forget: index faces in the uploaded photo for the tagging prompt queue.
-            Task { await FaceIndexService.shared.processFaces(in: image) }
+            Task { await FaceEmbeddingService.shared.processFaces(in: image) }
         } catch {
             step = .error(error.localizedDescription)
         }
@@ -178,9 +178,11 @@ struct SendFlowView: View {
 
 struct PhotoPickerStep: View {
     @ObservedObject var vm: SendFlowViewModel
+    @State private var showSuggestedPhotos = false
+    @State private var partnerEmbedding: [Float]?
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.lg) {
             Spacer()
             Text("Choose a photo")
                 .font(.mtTitle)
@@ -199,8 +201,90 @@ struct PhotoPickerStep: View {
             .onChange(of: vm.selectedItem) { _, _ in
                 Task { await vm.loadSelectedImage() }
             }
+
+            // Auto-scan: find photos with this person's face
+            Button {
+                Task {
+                    // Try chapter tagged faces first, then partner ID
+                    partnerEmbedding = await FaceEmbeddingService.shared.embeddingForChapter(chapterID: vm.chapterID)
+                    if partnerEmbedding == nil {
+                        // No tagged faces — try to get from any partner in this chapter
+                        if let partnerID = await loadPartnerID(chapterID: vm.chapterID) {
+                            partnerEmbedding = await FaceEmbeddingService.shared.embeddingForPartner(partnerID: partnerID)
+                        }
+                    }
+                    showSuggestedPhotos = true
+                }
+            } label: {
+                Label("Find more photos of this person", systemImage: "sparkle.magnifyingglass")
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .stroke(Color.mtLabel, lineWidth: 1.5)
+                    )
+            }
+            .padding(.horizontal, Spacing.xl)
+
+            Text("Scans your photo library for photos\nwith the same person")
+                .font(.mtCaption)
+                .foregroundStyle(Color.mtSecondary)
+                .multilineTextAlignment(.center)
+
             Spacer()
         }
+        .sheet(isPresented: $showSuggestedPhotos) {
+            SuggestedPhotosView(
+                chapterID: vm.chapterID,
+                partnerName: "them",
+                directEmbedding: partnerEmbedding
+            ) { selectedAssets in
+                showSuggestedPhotos = false
+                guard let asset = selectedAssets.first else { return }
+                Task {
+                    let options = PHImageRequestOptions()
+                    options.deliveryMode = .highQualityFormat
+                    options.isSynchronous = false
+                    options.isNetworkAccessAllowed = true
+
+                    let image: UIImage? = await withCheckedContinuation { cont in
+                        var resumed = false
+                        PHImageManager.default().requestImage(
+                            for: asset,
+                            targetSize: CGSize(width: 1200, height: 1200),
+                            contentMode: .aspectFit,
+                            options: options
+                        ) { img, info in
+                            guard !resumed else { return }
+                            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                            if !isDegraded { resumed = true; cont.resume(returning: img) }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                            guard !resumed else { return }
+                            resumed = true
+                            cont.resume(returning: nil)
+                        }
+                    }
+
+                    if let image {
+                        vm.selectedImage = image
+                        vm.photoWidth = Int(image.size.width * image.scale)
+                        vm.photoHeight = Int(image.size.height * image.scale)
+                        vm.step = .addCaption
+                        vm.detectedFaces = await FaceDetectionService.detectFaces(in: image)
+                    }
+                }
+            }
+        }
+    }
+
+    private func loadPartnerID(chapterID: String) async -> String? {
+        // Try to get chapters from app state
+        // Fallback: load from API
+        let chapters = try? await APIClient.shared.chapters()
+        return chapters?.first(where: { $0.id == chapterID })?.partner?.id
     }
 }
 

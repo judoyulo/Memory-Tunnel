@@ -117,13 +117,9 @@ Boot check initializer (`apns_check.rb`) logs a warning if these are missing.
 
 ---
 
-### Replace Vision landmarks with Core ML face embeddings — P1
-Vision landmark descriptors (76 x/y points = 152 floats) are fundamentally wrong for face identity.
-They compare face geometry, not identity. Same person at different angles gets split. Different people
-with similar bone structure get merged. CEO test confirmed: only 3 duplicate faces found.
-**Fix:** Integrate MobileFaceNet (or ArcFace) via Core ML (~5MB model). Produces 128-dim identity
-vectors that survive lighting/angle/expression changes. Replace `extractLandmarkDescriptor` with
-`generateEmbedding` in FaceIndexService. Update L2 threshold for the new embedding space.
-Keep everything on-device. No biometric data leaves the phone.
-**Effort:** S (human: ~1 week / CC: ~30 min)
-**File:** `ios/MemoryTunnel/Services/FaceIndexService.swift`
+### ~~Replace Vision landmarks with Core ML face embeddings~~ — COMPLETE (2026-04-04)
+Integrated MobileFaceNet (w600k_mbf, 6.6MB, 512-dim embeddings) via CoreML. Deleted FaceIndexService entirely.
+FaceEmbeddingService is now the single face service with alignment, centroid clustering, and post-merge pass.
+PhotoLibraryScanner upgraded: .highQualityFormat at 1024px, random sampling, adaptive scan (500 min, extend to 20+ clusters).
+Result: 311/315 faces aligned (98.7%), 9 correct clusters from 2000 photos (vs. 5 broken clusters before).
+**Files:** `ios/MemoryTunnel/Services/FaceEmbeddingService.swift`, `ios/MemoryTunnel/Services/PhotoLibraryScanner.swift`

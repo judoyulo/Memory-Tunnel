@@ -1,3 +1,5 @@
+require "aws-sdk-s3"
+
 class Memory < ApplicationRecord
   belongs_to :chapter
   belongs_to :owner, class_name: "User"

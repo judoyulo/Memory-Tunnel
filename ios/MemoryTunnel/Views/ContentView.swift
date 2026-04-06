@@ -5,7 +5,10 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var router: NotificationRouter
-    @State private var selectedTab: Tab = .chapters
+    @State private var selectedTab: Tab = .home
+    #if DEBUG
+    @State private var showDiagnostic = false
+    #endif
 
     enum Tab { case home, chapters }
 
@@ -21,11 +24,26 @@ struct ContentView: View {
         }
         .tint(Color.mtLabel)
         .onAppear {
-            // Default to Chapters for new users, Today for users with chapters
-            selectedTab = appState.hasChapters ? .home : .chapters
+            // Always start on Today tab
+            selectedTab = .home
         }
         .onChange(of: router.pendingChapterID) { _, chapterID in
             if chapterID != nil { selectedTab = .chapters }
         }
+        #if DEBUG
+        .overlay(alignment: .bottomLeading) {
+            Button { showDiagnostic = true } label: {
+                Image(systemName: "brain.head.profile")
+                    .font(.caption)
+                    .padding(8)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .padding(.leading, 16)
+            .padding(.bottom, 60)
+        }
+        .sheet(isPresented: $showDiagnostic) {
+            FaceClusterDiagnosticView()
+        }
+        #endif
     }
 }

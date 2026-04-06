@@ -149,7 +149,7 @@ final class SmartStartViewModel: ObservableObject {
             )
 
             // 7. Fire-and-forget face indexing
-            Task { await FaceIndexService.shared.processFaces(in: image) }
+            Task { await FaceEmbeddingService.shared.processFaces(in: image) }
 
             state = .complete(
                 chapterID: chapterID,

@@ -29,19 +29,8 @@ struct PhotoDetailView: View {
 
             TabView(selection: $currentIndex) {
                 ForEach(Array(memories.enumerated()), id: \.element.id) { index, memory in
-                    GeometryReader { geo in
-                        AsyncImage(url: memory.mediaURL) { image in
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: geo.size.width, height: geo.size.height)
-                        } placeholder: {
-                            ProgressView()
-                                .tint(.white)
-                        }
-                        .frame(width: geo.size.width, height: geo.size.height)
-                    }
-                    .tag(index)
+                    ZoomablePhotoContent(url: memory.mediaURL)
+                        .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: memories.count > 1 ? .automatic : .never))

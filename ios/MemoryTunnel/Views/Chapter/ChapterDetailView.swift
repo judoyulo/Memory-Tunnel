@@ -52,22 +52,49 @@ final class ChapterDetailViewModel: ObservableObject {
     }
 }
 
+// MARK: - View Mode
+
+enum ChapterViewMode: String {
+    case cinematic
+    case journal
+}
+
 // MARK: - Chapter Detail View (Memory Journal)
 
 struct ChapterDetailView: View {
     let chapter: Chapter
     @EnvironmentObject var appState: AppState
     @StateObject private var vm: ChapterDetailViewModel
-    @State private var showSendFlow = false
-    @State private var showVoiceRecorder = false
-    @State private var showTextComposer = false
-    @State private var showShareSheet = false
+    enum ActiveSheet: Identifiable {
+        case sendFlow, voiceRecorder, textComposer, shareSheet
+        case suggestedPhotos, faceConfirmation, batchReview
+        case editMemory(Memory)
+        var id: String {
+            switch self {
+            case .sendFlow: return "send"
+            case .voiceRecorder: return "voice"
+            case .textComposer: return "text"
+            case .shareSheet: return "share"
+            case .suggestedPhotos: return "suggested"
+            case .faceConfirmation: return "face"
+            case .batchReview: return "batch"
+            case .editMemory(let m): return "edit-\(m.id)"
+            }
+        }
+    }
+
+    @State private var activeSheet: ActiveSheet?
+    @State private var showPhotoPicker = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var dismissOnThisDay = false
-    @State private var editingMemory: Memory?
+    @State private var viewMode: ChapterViewMode
+    @State private var batchImages: [(image: UIImage, takenAt: Date?)] = []
 
     init(chapter: Chapter) {
         self.chapter = chapter
         _vm = StateObject(wrappedValue: ChapterDetailViewModel(chapterID: chapter.id))
+        let saved = UserDefaults.standard.string(forKey: "chapterViewMode_\(chapter.id)") ?? ""
+        _viewMode = State(initialValue: ChapterViewMode(rawValue: saved) ?? .cinematic)
     }
 
     private var currentUserID: String? {
@@ -91,18 +118,32 @@ struct ChapterDetailView: View {
                             .padding(.top, Spacing.sm)
                     }
 
-                    // Journal timeline (metadata-first, single column)
-                    ConversationTimelineView(
-                        memories: vm.memories,
-                        currentUserID: currentUserID,
-                        partnerName: chapter.partner?.displayName,
-                        onDelete: { memory in
-                            Task { await vm.deleteMemory(memory) }
-                        },
-                        onEdit: { memory in
-                            editingMemory = memory
-                        }
-                    )
+                    // View mode switch: cinematic film strip (default) or journal
+                    if viewMode == .cinematic {
+                        CinematicTimelineView(
+                            memories: vm.memories,
+                            currentUserID: currentUserID,
+                            partnerName: chapter.partner?.displayName,
+                            onDelete: { memory in
+                                Task { await vm.deleteMemory(memory) }
+                            },
+                            onEdit: { memory in
+                                activeSheet = .editMemory(memory)
+                            }
+                        )
+                    } else {
+                        ConversationTimelineView(
+                            memories: vm.memories,
+                            currentUserID: currentUserID,
+                            partnerName: chapter.partner?.displayName,
+                            onDelete: { memory in
+                                Task { await vm.deleteMemory(memory) }
+                            },
+                            onEdit: { memory in
+                                activeSheet = .editMemory(memory)
+                            }
+                        )
+                    }
                 }
             }
 
@@ -121,58 +162,106 @@ struct ChapterDetailView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showShareSheet = true
+                    let newMode: ChapterViewMode = viewMode == .cinematic ? .journal : .cinematic
+                    withAnimation(.mtSlide) {
+                        viewMode = newMode
+                    }
+                    UserDefaults.standard.set(newMode.rawValue, forKey: "chapterViewMode_\(chapter.id)")
+                } label: {
+                    Image(systemName: viewMode == .cinematic ? "list.bullet" : "film")
+                        .foregroundStyle(Color.mtLabel)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    activeSheet = .shareSheet
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundStyle(Color.mtLabel)
                 }
             }
         }
-        .sheet(isPresented: $showSendFlow) {
-            SendFlowView(chapterID: chapter.id)
-                .onDisappear { Task { await vm.load() } }
+        .sheet(item: $activeSheet) { sheet in
+            sheetContent(for: sheet)
         }
-        .sheet(isPresented: $showVoiceRecorder) {
-            VoiceRecorderView(chapterID: chapter.id) {
-                Task { await vm.load() }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotos, maxSelectionCount: 20, matching: .images)
+        .onChange(of: selectedPhotos) { _, items in
+            guard !items.isEmpty else { return }
+            Task {
+                var loaded: [(image: UIImage, takenAt: Date?)] = []
+                for item in items {
+                    guard let data = try? await item.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else { continue }
+                    loaded.append((image: image, takenAt: nil))
+                }
+                selectedPhotos = []
+                guard !loaded.isEmpty else { return }
+                batchImages = loaded
+                activeSheet = .batchReview
             }
         }
-        .sheet(isPresented: $showTextComposer) {
+        .faceTaggingOverlay(for: chapter)
+        .task { await vm.load() }
+    }
+
+    // MARK: - Sheet Content
+
+    @ViewBuilder
+    private func sheetContent(for sheet: ActiveSheet) -> some View {
+        switch sheet {
+        case .sendFlow:
+            SendFlowView(chapterID: chapter.id)
+                .onDisappear { Task { await vm.load() } }
+        case .voiceRecorder:
+            VoiceRecorderView(chapterID: chapter.id) { Task { await vm.load() } }
+        case .textComposer:
             TextComposerView { text, location, eventDate, tags in
                 Task {
                     _ = try? await APIClient.shared.createTextMemory(
-                        chapterID: chapter.id,
-                        caption: text,
-                        locationName: location,
-                        eventDate: eventDate,
+                        chapterID: chapter.id, caption: text,
+                        locationName: location, eventDate: eventDate,
                         emotionTags: tags.isEmpty ? nil : tags
                     )
                     await vm.load()
                 }
             }
-        }
-        .sheet(item: $editingMemory) { memory in
+        case .editMemory(let memory):
             MemoryEditSheet(
-                memory: memory,
-                chapterID: chapter.id,
-                onSave: { _ in
-                    // Reload from server to get correct sort order after date edit
-                    Task { await vm.load() }
-                },
-                onDelete: {
-                    Task { await vm.deleteMemory(memory) }
-                }
+                memory: memory, chapterID: chapter.id,
+                onSave: { _ in Task { await vm.load() } },
+                onDelete: { Task { await vm.deleteMemory(memory) } }
             )
-        }
-        .sheet(isPresented: $showShareSheet) {
+        case .shareSheet:
             if chapter.partner != nil {
                 ShareLink(item: URL(string: "https://app.memorytunnel.com/i/\(chapter.id)")!) {
                     Text("Share invite link")
                 }
             }
+        case .suggestedPhotos:
+            SuggestedPhotosView(
+                chapterID: chapter.id,
+                partnerName: chapter.partner?.displayName ?? "them",
+                partnerCrop: nil
+            ) { selectedAssets in
+                activeSheet = nil
+                Task {
+                    var loaded: [(image: UIImage, takenAt: Date?)] = []
+                    for asset in selectedAssets {
+                        guard let image = await loadFullImage(for: asset) else { continue }
+                        loaded.append((image: image, takenAt: asset.creationDate))
+                    }
+                    guard !loaded.isEmpty else { return }
+                    batchImages = loaded
+                    activeSheet = .batchReview
+                }
+            }
+        case .batchReview:
+            BatchPhotoReviewView(
+                chapterID: chapter.id, initialImages: batchImages
+            ) { Task { await vm.load() } }
+        case .faceConfirmation:
+            ChapterFaceConfirmationView(chapter: chapter, memories: vm.memories)
         }
-        .faceTaggingOverlay(for: chapter)
-        .task { await vm.load() }
     }
 
     // MARK: - Empty State
@@ -202,19 +291,32 @@ struct ChapterDetailView: View {
     private var addButton: some View {
         Menu {
             Button {
-                showSendFlow = true
+                showPhotoPicker = true
             } label: {
-                Label("Photo", systemImage: "photo")
+                Label("Photos", systemImage: "photo.on.rectangle")
             }
             Button {
-                showVoiceRecorder = true
+                activeSheet = .suggestedPhotos
+            } label: {
+                Label("Find photos of \(chapter.partner?.displayName ?? "them")", systemImage: "sparkle.magnifyingglass")
+            }
+            Button {
+                activeSheet = .voiceRecorder
             } label: {
                 Label("Voice clip", systemImage: "waveform")
             }
             Button {
-                showTextComposer = true
+                activeSheet = .textComposer
             } label: {
                 Label("Write something", systemImage: "text.quote")
+            }
+
+            Divider()
+
+            Button {
+                activeSheet = .faceConfirmation
+            } label: {
+                Label("Set \(chapter.partner?.displayName ?? "partner")'s face", systemImage: "face.smiling")
             }
         } label: {
             Image(systemName: "plus")
@@ -247,6 +349,69 @@ struct ChapterDetailView: View {
             return "\(months) month\(months == 1 ? "" : "s")"
         }
         return "Just started"
+    }
+
+    // MARK: - Photo Upload Helpers
+
+    private func loadFullImage(for asset: PHAsset) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .none
+            options.isSynchronous = false
+            options.isNetworkAccessAllowed = true
+            var resumed = false
+            PHImageManager.default().requestImage(
+                for: asset, targetSize: CGSize(width: 1200, height: 1200),
+                contentMode: .aspectFit, options: options
+            ) { image, info in
+                guard !resumed else { return }
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if !isDegraded {
+                    resumed = true
+                    continuation.resume(returning: image)
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: nil)
+            }
+        }
+    }
+
+    private func uploadPhotoData(_ image: UIImage, to chapterID: String) async throws -> Memory? {
+        guard let jpegData = image.jpegData(compressionQuality: 0.85) else { return nil }
+        let presign = try await APIClient.shared.presign(chapterID: chapterID)
+        try await APIClient.shared.uploadToS3(data: jpegData, presign: presign)
+        let memory = try await APIClient.shared.createMemory(
+            chapterID: chapterID,
+            s3Key: presign.s3Key,
+            caption: nil,
+            takenAt: nil,
+            visibility: "this_item",
+            width: Int(image.size.width),
+            height: Int(image.size.height)
+        )
+        Task { await FaceEmbeddingService.shared.processFaces(in: image) }
+        return memory
+    }
+
+    private func uploadPhoto(_ image: UIImage, to chapterID: String, asset: PHAsset) async throws -> Memory? {
+        guard let jpegData = image.jpegData(compressionQuality: 0.85) else { return nil }
+        let presign = try await APIClient.shared.presign(chapterID: chapterID)
+        try await APIClient.shared.uploadToS3(data: jpegData, presign: presign)
+        let memory = try await APIClient.shared.createMemory(
+            chapterID: chapterID,
+            s3Key: presign.s3Key,
+            caption: nil,
+            takenAt: asset.creationDate,
+            visibility: "this_item",
+            width: Int(image.size.width),
+            height: Int(image.size.height)
+        )
+        Task { await FaceEmbeddingService.shared.processFaces(in: image) }
+        return memory
     }
 }
 

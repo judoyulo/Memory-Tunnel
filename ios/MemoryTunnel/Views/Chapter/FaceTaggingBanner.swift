@@ -134,7 +134,7 @@ struct FaceTaggingOverlay: ViewModifier {
                         onConfirm: {
                             guard let partnerID = chapter.partner?.id else { return }
                             do {
-                                try await FaceIndexService.shared.tag(
+                                try await FaceEmbeddingService.shared.tag(
                                     faceID:    face.id,
                                     as:        partnerID,
                                     in:        chapter.id
@@ -157,7 +157,7 @@ struct FaceTaggingOverlay: ViewModifier {
             .task {
                 // Only load untagged faces for active chapters with partners
                 guard chapter.status == "active", chapter.partner != nil else { return }
-                queue = await FaceIndexService.shared.untaggedFaces()
+                queue = await FaceEmbeddingService.shared.untaggedFaces()
             }
     }
 }
