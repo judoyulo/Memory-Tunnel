@@ -27,6 +27,11 @@ class ApnsService
     def send!(push_token:, title:, body:, data: {}, badge: nil)
       return if push_token.blank?
 
+      unless configured?
+        Rails.logger.warn("[ApnsService] skipping push — APNS_KEY_ID, APNS_TEAM_ID, or APNS_P8_KEY not set")
+        return
+      end
+
       payload = build_payload(title: title, body: body, data: data, badge: badge)
       jwt     = build_jwt
 
@@ -49,6 +54,10 @@ class ApnsService
       end
 
       response
+    end
+
+    def configured?
+      ENV["APNS_KEY_ID"].present? && ENV["APNS_TEAM_ID"].present? && ENV["APNS_P8_KEY"].present?
     end
 
     private

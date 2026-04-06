@@ -6,7 +6,9 @@ module Api
       # Creates (or reuses) a pending Invitation for this chapter and returns the share URL.
       # The client displays this URL via Branch.io deferred deep link on the web preview page.
       def create
-        chapter = Chapter.active.for_user(current_user).find(params.require(:chapter_id))
+        chapter = Chapter.where(status: %w[pending active])
+                         .for_user(current_user)
+                         .find(params.require(:chapter_id))
         memory  = chapter.memories.find(params.require(:memory_id))
 
         unless memory.owner_id == current_user.id

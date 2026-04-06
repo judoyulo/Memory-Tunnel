@@ -65,6 +65,12 @@ actor APIClient {
         return response
     }
 
+    func devLogin(code: String) async throws -> OTPVerifyResponse {
+        let response: OTPVerifyResponse = try await post("/api/v1/auth/dev_login", body: ["code": code], authenticated: false)
+        token = response.token
+        return response
+    }
+
     // MARK: Me
 
     func me() async throws -> User {
@@ -84,6 +90,16 @@ actor APIClient {
         try await get("/api/v1/chapters")
     }
 
+    func deleteChapter(id: String) async throws {
+        try await delete("/api/v1/chapters/\(id)")
+    }
+
+    func createChapter(name: String?) async throws -> Chapter {
+        var body: [String: String] = [:]
+        if let n = name { body["name"] = n }
+        return try await post("/api/v1/chapters", body: body)
+    }
+
     func chapter(id: String) async throws -> Chapter {
         try await get("/api/v1/chapters/\(id)")
     }
@@ -95,7 +111,7 @@ actor APIClient {
     // MARK: Memories
 
     func memories(chapterID: String, page: Int = 1) async throws -> [Memory] {
-        try await get("/api/v1/chapters/\(chapterID)/memories?page=\(page)")
+        try await get("/api/v1/chapters/\(chapterID)/memories", queryItems: [URLQueryItem(name: "page", value: "\(page)")])
     }
 
     func presign(chapterID: String, contentType: String = "image/jpeg") async throws -> PresignResponse {
@@ -103,14 +119,76 @@ actor APIClient {
                        body: ["content_type": contentType])
     }
 
-    func createMemory(chapterID: String, s3Key: String, caption: String?, takenAt: Date?, visibility: String) async throws -> Memory {
-        var body: [String: String] = ["s3_key": s3Key, "visibility": visibility]
+    func createMemory(chapterID: String, s3Key: String, caption: String?, takenAt: Date?,
+                      visibility: String, mediaType: String = "photo",
+                      locationName: String? = nil, latitude: Double? = nil, longitude: Double? = nil,
+                      width: Int? = nil, height: Int? = nil) async throws -> Memory {
+        var body: [String: String] = ["s3_key": s3Key, "visibility": visibility, "media_type": mediaType]
         if let c = caption { body["caption"] = c }
         if let t = takenAt {
             let iso = ISO8601DateFormatter()
             body["taken_at"] = iso.string(from: t)
         }
+        if let l = locationName { body["location_name"] = l }
+        if let lat = latitude   { body["latitude"] = String(lat) }
+        if let lon = longitude  { body["longitude"] = String(lon) }
+        if let w = width        { body["width"] = String(w) }
+        if let h = height       { body["height"] = String(h) }
         return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
+    }
+
+    // MARK: Invitation Preview (unauthenticated)
+
+    func fetchInvitationPreview(token: String) async throws -> InvitationPreview {
+        try await get("/api/v1/invitation_previews/\(token)", authenticated: false)
+    }
+
+    func createTextMemory(chapterID: String, caption: String,
+                          locationName: String? = nil, eventDate: Date? = nil,
+                          emotionTags: [String]? = nil) async throws -> Memory {
+        var body: [String: String] = ["media_type": "text", "caption": caption, "visibility": "this_item"]
+        if let l = locationName { body["location_name"] = l }
+        if let d = eventDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            body["event_date"] = formatter.string(from: d)
+        }
+        // emotion_tags: join as JSON array string since body is [String: String]
+        // The backend parses this from the JSON body which supports arrays
+        return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
+    }
+
+    func createLocationCheckin(chapterID: String, locationName: String, latitude: Double, longitude: Double, caption: String? = nil) async throws -> Memory {
+        var body: [String: String] = [
+            "media_type": "location_checkin", "visibility": "this_item",
+            "location_name": locationName, "latitude": String(latitude), "longitude": String(longitude)
+        ]
+        if let c = caption { body["caption"] = c }
+        return try await post("/api/v1/chapters/\(chapterID)/memories", body: body)
+    }
+
+    func updateMemory(chapterID: String, memoryID: String, caption: String?,
+                      locationName: String? = nil, eventDate: Date? = nil,
+                      emotionTags: [String]? = nil) async throws {
+        var body: [String: Any] = [:]
+        // Always send caption (even empty string) so user can clear it
+        body["caption"] = caption ?? ""
+        if let l = locationName { body["location_name"] = l }
+        if let d = eventDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            body["event_date"] = formatter.string(from: d)
+            // Also update taken_at so server sort (COALESCE(taken_at, created_at)) reflects the edit
+            let iso = ISO8601DateFormatter()
+            body["taken_at"] = iso.string(from: d)
+        }
+        body["emotion_tags"] = emotionTags ?? []
+
+        var req = try buildRequest(method: "PATCH", path: "/api/v1/chapters/\(chapterID)/memories/\(memoryID)")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Don't decode response — caller reloads from server for fresh data
+        try await performVoid(req)
     }
 
     func deleteMemory(chapterID: String, memoryID: String) async throws {
@@ -148,6 +226,12 @@ actor APIClient {
         try await post("/api/v1/daily_card/open", body: [:])
     }
 
+    /// Signal that a chapter partner has an upcoming birthday (detected on-device via Contacts).
+    /// The server queues a birthday daily card. No date data is included in the request.
+    func signalBirthday(chapterID: String) async throws {
+        try await post("/api/v1/daily_card/birthday_signal", body: ["chapter_id": chapterID])
+    }
+
     // MARK: - S3 Direct Upload
 
     /// Uploads raw image data directly to S3 using the presigned PUT URL.
@@ -167,8 +251,8 @@ actor APIClient {
     // MARK: - HTTP primitives
 
     @discardableResult
-    private func get<T: Decodable>(_ path: String) async throws -> T {
-        let req = try buildRequest(method: "GET", path: path)
+    private func get<T: Decodable>(_ path: String, authenticated: Bool = true, queryItems: [URLQueryItem]? = nil) async throws -> T {
+        let req = try buildRequest(method: "GET", path: path, authenticated: authenticated, queryItems: queryItems)
         return try await perform(req)
     }
 
@@ -215,8 +299,10 @@ actor APIClient {
         try await performVoid(req)
     }
 
-    private func buildRequest(method: String, path: String, authenticated: Bool = true) throws -> URLRequest {
-        let url = baseURL.appending(path: path)
+    private func buildRequest(method: String, path: String, authenticated: Bool = true, queryItems: [URLQueryItem]? = nil) throws -> URLRequest {
+        var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
+        if let items = queryItems { components.queryItems = items }
+        guard let url = components.url else { throw APIError.httpError(0, "invalid URL") }
         var req = URLRequest(url: url)
         req.httpMethod = method
         if authenticated {
@@ -228,7 +314,7 @@ actor APIClient {
 
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
         let (data, response) = try await URLSession.shared.data(for: request)
-        let http = response as! HTTPURLResponse
+        guard let http = response as? HTTPURLResponse else { throw APIError.httpError(0, "invalid response") }
 
         if http.statusCode == 204 { throw APIError.noContent }
 
@@ -246,7 +332,7 @@ actor APIClient {
 
     private func performVoid(_ request: URLRequest) async throws {
         let (data, response) = try await URLSession.shared.data(for: request)
-        let http = response as! HTTPURLResponse
+        guard let http = response as? HTTPURLResponse else { throw APIError.httpError(0, "invalid response") }
         guard (200..<300).contains(http.statusCode) else {
             let msg = String(data: data, encoding: .utf8)
             throw APIError.httpError(http.statusCode, msg)

@@ -2,9 +2,9 @@ class DailyCardQueueEntry < ApplicationRecord
   belongs_to :user
   belongs_to :chapter
 
-  PRIORITIES = { birthday: 1, decay: 2, manual: 3 }.freeze
+  PRIORITIES = { welcome: 0, birthday: 1, decay: 2, manual: 3 }.freeze
 
-  enum :trigger_type, { birthday: "birthday", decay: "decay", manual: "manual" }
+  enum :trigger_type, { welcome: "welcome", birthday: "birthday", decay: "decay", manual: "manual" }
 
   validates :user, :chapter, :trigger_type, :priority, :scheduled_for, presence: true
 

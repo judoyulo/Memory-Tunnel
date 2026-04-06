@@ -19,6 +19,9 @@ extension Color {
     // ✓ Sent confirmation, birthday trigger dot, decay notification dot
     static let mtAccent     = Color(hex: "#C8956C")   // warm amber
 
+    // Semantic
+    static let mtError      = Color(hex: "#E04F4F")   // error text / destructive hint
+
     // Convenience initializer from hex string
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -60,7 +63,7 @@ enum Radius {
 
 extension Font {
     // Display — hero headings (Daily Card sender name, Chapter title)
-    static let mtDisplay = Font.system(size: 26, weight: .bold, design: .default)
+    static let mtDisplay = Font.system(size: 28, weight: .medium, design: .default)
 
     // Title — screen-level headings
     static let mtTitle   = Font.system(size: 20, weight: .semibold, design: .default)
@@ -68,11 +71,17 @@ extension Font {
     // Body — captions, descriptions
     static let mtBody    = Font.system(size: 15, weight: .regular, design: .default)
 
-    // Label — UI labels, buttons, navigation
+    // Label — UI labels, list item names, navigation
     static let mtLabel   = Font.system(size: 15, weight: .medium, design: .default)
 
+    // Button — filled button labels (Primary, Accent, Destructive variants)
+    static let mtButton  = Font.system(size: 17, weight: .semibold, design: .default)
+
     // Caption — metadata, timestamps, micro-copy
-    static let mtCaption = Font.system(size: 13, weight: .regular, design: .default)
+    static let mtCaption = Font.system(size: 12, weight: .regular, design: .default)
+
+    // Empty state title — 22pt Regular per DESIGN.md empty state spec
+    static let mtEmptyTitle = Font.system(size: 22, weight: .regular, design: .default)
 
     // Data — tabular figures
     static let mtData    = Font.system(size: 13, weight: .regular, design: .monospaced)
@@ -81,6 +90,26 @@ extension Font {
 // MARK: - Animation
 
 extension Animation {
-    static let mtFade  = Animation.easeOut(duration: 0.20)
-    static let mtSlide = Animation.easeOut(duration: 0.30)
+    /// Quick opacity change — photo fade-in, confirmation appear/disappear.
+    static let mtFade   = Animation.easeOut(duration: 0.20)
+    /// Slide-based step transitions — onboarding steps, Smart Start states.
+    static let mtSlide  = Animation.easeOut(duration: 0.30)
+    /// Photo reveal — cinematic darkroom-print entrance (scale 0.97→1 + fade).
+    static let mtReveal = Animation.easeOut(duration: 0.45)
+    /// Interactive spring — button press, card tap, face card appear.
+    static let mtSpring = Animation.spring(response: 0.35, dampingFraction: 0.75)
+    /// Confirmation bounce — amber checkmark, badge pop.
+    static let mtBounce = Animation.spring(response: 0.40, dampingFraction: 0.60)
+}
+
+// MARK: - Spring Button Style
+
+/// Applies a subtle spring scale effect on press — makes every tap feel responsive.
+/// Usage: .buttonStyle(MTSpringButtonStyle())
+struct MTSpringButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(.mtSpring, value: configuration.isPressed)
+    }
 }

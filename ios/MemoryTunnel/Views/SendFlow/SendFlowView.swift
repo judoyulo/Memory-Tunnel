@@ -1,5 +1,7 @@
 import SwiftUI
 import PhotosUI
+import CoreLocation
+import ImageIO
 
 // MARK: - ViewModel
 
@@ -15,6 +17,14 @@ final class SendFlowViewModel: ObservableObject {
     @Published var caption: String = ""
     @Published var visibility: String = "this_item"   // default: explicitly shared
 
+    // EXIF metadata prefilled from photo
+    @Published var locationName: String = ""
+    @Published var eventDate: Date?
+    @Published var emotionTags: Set<String> = []
+    @Published var photoWidth: Int?
+    @Published var photoHeight: Int?
+    private var photoTakenAt: Date?
+
     let chapterID: String
     var createdInvitation: Invitation?
 
@@ -28,13 +38,56 @@ final class SendFlowViewModel: ObservableObject {
               let image = UIImage(data: data) else { return }
 
         selectedImage = image
+        photoWidth = Int(image.size.width * image.scale)
+        photoHeight = Int(image.size.height * image.scale)
         step = .addCaption
+
+        // Extract EXIF metadata (creation date + location) from the photo
+        await extractPhotoMetadata(from: data)
 
         // On-device face detection (async, non-blocking)
         detectedFaces = await FaceDetectionService.detectFaces(in: image)
     }
 
+    /// Read EXIF/IPTC metadata from photo data to prefill date and location
+    private func extractPhotoMetadata(from data: Data) async {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { return }
+
+        // Extract date from EXIF
+        if let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any],
+           let dateStr = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+            if let date = formatter.date(from: dateStr) {
+                photoTakenAt = date
+                eventDate = date
+            }
+        }
+
+        // Extract GPS location
+        if let gps = properties[kCGImagePropertyGPSDictionary as String] as? [String: Any] {
+            var lat = gps[kCGImagePropertyGPSLatitude as String] as? Double ?? 0
+            var lng = gps[kCGImagePropertyGPSLongitude as String] as? Double ?? 0
+            if let latRef = gps[kCGImagePropertyGPSLatitudeRef as String] as? String, latRef == "S" { lat = -lat }
+            if let lngRef = gps[kCGImagePropertyGPSLongitudeRef as String] as? String, lngRef == "W" { lng = -lng }
+
+            if lat != 0 || lng != 0 {
+                // Reverse geocode to get a place name
+                let geocoder = CLGeocoder()
+                let location = CLLocation(latitude: lat, longitude: lng)
+                if let placemark = try? await geocoder.reverseGeocodeLocation(location).first {
+                    let parts = [placemark.locality, placemark.country].compactMap { $0 }
+                    if !parts.isEmpty {
+                        locationName = parts.joined(separator: ", ")
+                    }
+                }
+            }
+        }
+    }
+
     func send() async {
+        guard case .addCaption = step else { return }
         guard let image = selectedImage else { return }
         step = .sending
 
@@ -49,13 +102,16 @@ final class SendFlowViewModel: ObservableObject {
             // 2. Upload directly to S3 (no server traffic)
             try await APIClient.shared.uploadToS3(data: data, presign: presign)
 
-            // 3. Create the Memory record
+            // 3. Create the Memory record (with EXIF-prefilled metadata)
             let memory = try await APIClient.shared.createMemory(
-                chapterID:  chapterID,
-                s3Key:      presign.s3Key,
-                caption:    caption.isEmpty ? nil : caption,
-                takenAt:    nil,
-                visibility: visibility
+                chapterID:    chapterID,
+                s3Key:        presign.s3Key,
+                caption:      caption.isEmpty ? nil : caption,
+                takenAt:      photoTakenAt,
+                visibility:   visibility,
+                locationName: locationName.isEmpty ? nil : locationName,
+                width:        photoWidth,
+                height:       photoHeight
             )
 
             // 4. Create invitation (generates share URL for Branch.io)
@@ -65,6 +121,9 @@ final class SendFlowViewModel: ObservableObject {
             )
 
             step = .sent
+
+            // Fire-and-forget: index faces in the uploaded photo for the tagging prompt queue.
+            Task { await FaceEmbeddingService.shared.processFaces(in: image) }
         } catch {
             step = .error(error.localizedDescription)
         }
@@ -119,9 +178,11 @@ struct SendFlowView: View {
 
 struct PhotoPickerStep: View {
     @ObservedObject var vm: SendFlowViewModel
+    @State private var showSuggestedPhotos = false
+    @State private var partnerEmbedding: [Float]?
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.lg) {
             Spacer()
             Text("Choose a photo")
                 .font(.mtTitle)
@@ -129,19 +190,101 @@ struct PhotoPickerStep: View {
 
             PhotosPicker(selection: $vm.selectedItem, matching: .images) {
                 Label("Open Photos", systemImage: "photo.on.rectangle")
-                    .font(.mtLabel)
-                    .foregroundStyle(.white)
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.mtAccent)
+                    .background(Color.mtLabel)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.button))
             }
             .padding(.horizontal, Spacing.xl)
             .onChange(of: vm.selectedItem) { _, _ in
                 Task { await vm.loadSelectedImage() }
             }
+
+            // Auto-scan: find photos with this person's face
+            Button {
+                Task {
+                    // Try chapter tagged faces first, then partner ID
+                    partnerEmbedding = await FaceEmbeddingService.shared.embeddingForChapter(chapterID: vm.chapterID)
+                    if partnerEmbedding == nil {
+                        // No tagged faces — try to get from any partner in this chapter
+                        if let partnerID = await loadPartnerID(chapterID: vm.chapterID) {
+                            partnerEmbedding = await FaceEmbeddingService.shared.embeddingForPartner(partnerID: partnerID)
+                        }
+                    }
+                    showSuggestedPhotos = true
+                }
+            } label: {
+                Label("Find more photos of this person", systemImage: "sparkle.magnifyingglass")
+                    .font(.mtButton)
+                    .foregroundStyle(Color.mtLabel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.button)
+                            .stroke(Color.mtLabel, lineWidth: 1.5)
+                    )
+            }
+            .padding(.horizontal, Spacing.xl)
+
+            Text("Scans your photo library for photos\nwith the same person")
+                .font(.mtCaption)
+                .foregroundStyle(Color.mtSecondary)
+                .multilineTextAlignment(.center)
+
             Spacer()
         }
+        .sheet(isPresented: $showSuggestedPhotos) {
+            SuggestedPhotosView(
+                chapterID: vm.chapterID,
+                partnerName: "them",
+                directEmbedding: partnerEmbedding
+            ) { selectedAssets in
+                showSuggestedPhotos = false
+                guard let asset = selectedAssets.first else { return }
+                Task {
+                    let options = PHImageRequestOptions()
+                    options.deliveryMode = .highQualityFormat
+                    options.isSynchronous = false
+                    options.isNetworkAccessAllowed = true
+
+                    let image: UIImage? = await withCheckedContinuation { cont in
+                        var resumed = false
+                        PHImageManager.default().requestImage(
+                            for: asset,
+                            targetSize: CGSize(width: 1200, height: 1200),
+                            contentMode: .aspectFit,
+                            options: options
+                        ) { img, info in
+                            guard !resumed else { return }
+                            let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                            if !isDegraded { resumed = true; cont.resume(returning: img) }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                            guard !resumed else { return }
+                            resumed = true
+                            cont.resume(returning: nil)
+                        }
+                    }
+
+                    if let image {
+                        vm.selectedImage = image
+                        vm.photoWidth = Int(image.size.width * image.scale)
+                        vm.photoHeight = Int(image.size.height * image.scale)
+                        vm.step = .addCaption
+                        vm.detectedFaces = await FaceDetectionService.detectFaces(in: image)
+                    }
+                }
+            }
+        }
+    }
+
+    private func loadPartnerID(chapterID: String) async -> String? {
+        // Try to get chapters from app state
+        // Fallback: load from API
+        let chapters = try? await APIClient.shared.chapters()
+        return chapters?.first(where: { $0.id == chapterID })?.partner?.id
     }
 }
 
@@ -152,19 +295,20 @@ struct CaptionStep: View {
     @FocusState private var captionFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
+        ScrollView {
+            VStack(spacing: 0) {
             // Preview
             if let image = vm.selectedImage {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 320)
+                    .frame(height: 240)
                     .clipped()
                     .overlay(FaceOverlayView(faces: vm.detectedFaces))
             }
 
-            // Caption input
+            // Caption input + metadata
             VStack(alignment: .leading, spacing: Spacing.md) {
                 TextField("Add a caption… (optional)", text: $vm.caption, axis: .vertical)
                     .font(.mtBody)
@@ -174,6 +318,13 @@ struct CaptionStep: View {
                     .padding(Spacing.md)
                     .background(Color.mtSurface)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card))
+
+                // Metadata (prefilled from EXIF)
+                MemoryMetadataFields(
+                    locationName: $vm.locationName,
+                    eventDate: $vm.eventDate,
+                    emotionTags: $vm.emotionTags
+                )
 
                 // Visibility toggle
                 HStack {
@@ -194,17 +345,16 @@ struct CaptionStep: View {
                     Task { await vm.send() }
                 } label: {
                     Text("Send")
-                        .font(.mtLabel)
-                        .foregroundStyle(.white)
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.mtAccent)
+                        .background(Color.mtLabel)
                         .clipShape(RoundedRectangle(cornerRadius: Radius.button))
                 }
             }
             .padding(Spacing.md)
-
-            Spacer()
+            }
         }
     }
 }
@@ -285,12 +435,14 @@ struct SentStep: View {
                     showShareSheet = true
                 } label: {
                     Label("Share invite link", systemImage: "square.and.arrow.up")
-                        .font(.mtLabel)
-                        .foregroundStyle(.white)
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.mtAccent)
-                        .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
+                        )
                 }
                 .sheet(isPresented: $showShareSheet) {
                     ShareSheet(items: [url])
@@ -325,7 +477,7 @@ struct ErrorStep: View {
                 .multilineTextAlignment(.center)
             Button("Try again", action: retry)
                 .font(.mtLabel)
-                .foregroundStyle(Color.mtAccent)
+                .foregroundStyle(Color.mtSecondary)
             Spacer()
         }
         .padding(Spacing.xl)

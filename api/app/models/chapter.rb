@@ -10,8 +10,7 @@ class Chapter < ApplicationRecord
   validates :member_a, presence: true
   validates :status, presence: true
 
-  # pending state requires invited_phone; active state requires member_b
-  validates :invited_phone, presence: true, if: -> { pending? && member_b.nil? }
+  # active state requires member_b; pending chapters may use link-based invites (no phone required)
   validates :member_b, presence: true, if: :active?
 
   # ── Scopes ───────────────────────────────────────────────────────────────────
@@ -32,19 +31,19 @@ class Chapter < ApplicationRecord
   # plus only the memories from the other member that match their current visibility setting.
   def memories_visible_to(user)
     other = other_member(user)
-    return Memory.none unless other
 
-    own_memories    = memories.where(owner: user)
-    their_setting   = memories.where(owner: other).pick(:visibility)
+    own_memories = memories.where(owner: user)
 
-    their_memories = case their_setting
-                     when "all"       then memories.where(owner: other)
-                     when "this_item" then memories.where(owner: other, visibility: "this_item")
-                     else                  Memory.none
-                     end
+    # Pending chapters (no partner yet): show only the creator's own memories.
+    unless other
+      return own_memories.order(Arel.sql("COALESCE(event_date::timestamp, taken_at, created_at) ASC"))
+    end
+
+    # Active chapters: show user's own + partner's memories with visible visibility.
+    their_memories = memories.where(owner: other, visibility: %w[all this_item])
 
     Memory.where(id: own_memories).or(Memory.where(id: their_memories))
-          .order(Arel.sql("COALESCE(taken_at, created_at) DESC"))
+          .order(Arel.sql("COALESCE(event_date::timestamp, taken_at, created_at) ASC"))
   end
 
   def other_member(user)

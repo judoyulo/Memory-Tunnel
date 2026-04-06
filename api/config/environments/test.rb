@@ -39,4 +39,9 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # GoodJob: run jobs inline (synchronously) in tests so no background threads are
+  # spawned. Without this, GoodJob's async scheduler causes Rails to hang on boot
+  # in non-TTY contexts (CI, background shells).
+  config.good_job.execution_mode = :inline
 end
