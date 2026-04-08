@@ -20,14 +20,14 @@ struct PhotoPermissionView: View {
                     .padding(.bottom, Spacing.lg)
 
                 // Headline
-                Text("See the people\nyou care about")
+                Text(L.seeThePeople)
                     .font(.mtEmptyTitle)
                     .foregroundStyle(Color.mtLabel)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, Spacing.md)
 
                 // Explanation
-                Text("Memory Tunnel scans your photos\non your device, privately.\nNothing leaves your phone.")
+                Text(L.photoPermissionBody)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtSecondary)
                     .multilineTextAlignment(.center)
@@ -38,11 +38,11 @@ struct PhotoPermissionView: View {
 
                 // CTAs
                 VStack(spacing: Spacing.md) {
-                    PrimaryButton(title: "Allow access to Photos", isLoading: false) {
+                    PrimaryButton(title: L.allowPhotos, isLoading: false) {
                         onAllow()
                     }
 
-                    Button("Skip this step") {
+                    Button(L.skipThisStep) {
                         onSkip()
                     }
                     .font(.mtButton)

@@ -2,6 +2,44 @@
 
 All notable changes to Memory Tunnel are documented here.
 
+## [0.3.0.0] — 2026-04-08
+
+Smart Start polish, full-screen photo feed, MobileFaceNet face matching, and Chinese localization.
+
+### Added
+
+- **Full-screen swipeable photo feed** — Today Tab now surfaces buried photos as edge-to-edge cards with face detection, auto-matching to memory lanes, and one-tap add.
+- **MobileFaceNet CoreML embeddings** — replaced landmark-based face matching with neural embeddings. On-device cosine similarity matching at 0.20 threshold. Embeddings never leave device.
+- **Cinematic chapter timeline** — metadata-first journal layout replacing bilateral DM view. Date/location heroes, suggested photos, daily dig.
+- **Simplified Chinese (zh-Hans)** — ~223 strings localized. Language picker in onboarding and settings. L10n.swift runtime switching.
+- **Scan progress ring** — animated ring with 27 rotating phrases during face scan. Deep scan mode after initial pass.
+- **Batch photo review** — multi-photo selection with per-photo caption/location/date editing before upload.
+- **Share card sheet** — "Time Capsule" and "Excavation" card styles for sharing memories externally with time-ago display.
+- **Face not correctly recognized?** — in-picker flow to reassign misdetected faces to the correct memory lane.
+- **Chapter viewer in onboarding** — "View in memory lane" shows the newly created chapter inline, with back to face bubbles.
+- **Suggested photos (Daily Dig)** — per-chapter photo discovery with coverage tracking, daily drops, deep scan mode.
+
+### Changed
+
+- **Feed card state tracking** — `allChapterMatches` accumulates across picker sessions. `@State` snapshots ensure excluded IDs are fresh on each sheet open.
+- **BatchPhotoReviewView done page** — always shown (including embedded mode) so users see "N photos added" confirmation.
+- **Per-photo EXIF location** — each photo gets its own reverse-geocoded location during upload, not just the first photo's.
+- **Chapter creation registers with AppState** — `appState.chapterCreated()` called from FacePickerSheet so new lanes appear in face matching immediately.
+
+### Fixed
+
+- Feed card excluded chapters stale after creating a new lane (sheet closure caching)
+- Single-face new-face cards allowing duplicate lane creation (face embedding not matched against new chapter)
+- "View in memory lane" button not navigating (was calling NotificationRouter from onboarding context)
+- Chapter detail freeze on slow network (15-second timeout on API call)
+- Photo selection lost during progressive scan (scan task now cancelled on face selection)
+- Card not re-rendering after memory edit (content included in view ID)
+- Memory not conforming to Equatable (SwiftUI diff detection)
+
+### Tests
+
+- RSpec: 42 examples, 0 failures (up from 19)
+
 ## [0.2.0.0] — 2026-04-02
 
 Chapter timeline redesign and smart Today tab. The chapter detail view is now a bilateral conversation timeline (your memories on the left, theirs on the right). The Today tab adapts to user state instead of showing "Come back tomorrow" to new users.

@@ -28,11 +28,28 @@ struct FaceSuggestion: Identifiable {
     var name: String = ""
 }
 
+// MARK: - Scan Progress (thread-safe counters for UI)
+
+// Observable progress tracker. Updated from any context via Task dispatch.
+@MainActor
+final class ScanProgressTracker: ObservableObject {
+    @Published var scanned: Int = 0
+    @Published var total: Int = 0
+
+    nonisolated func update(scanned: Int, total: Int) {
+        Task { @MainActor in
+            self.scanned = scanned
+            self.total = total
+        }
+    }
+}
+
 // MARK: - PhotoLibraryScanner
 
 actor PhotoLibraryScanner {
 
     static let shared = PhotoLibraryScanner()
+    @MainActor static let scanProgress = ScanProgressTracker()
     private init() {}
 
     // MARK: - Permission
@@ -86,6 +103,9 @@ actor PhotoLibraryScanner {
                     assetList = Array(assetList.prefix(maxPhotos))
                 }
 
+                let totalPhotos = assetList.count
+                PhotoLibraryScanner.scanProgress.update(scanned: 0, total: totalPhotos)
+
                 let scanStart = Date()
                 let deadline = scanStart.addingTimeInterval(60)
 
@@ -113,6 +133,7 @@ actor PhotoLibraryScanner {
                     guard let image = await loadImage(for: asset, targetSize: 1024) else { continue }
                     guard let cgImage = image.cgImage else { continue }
                     photosProcessed += 1
+                    PhotoLibraryScanner.scanProgress.update(scanned: photosProcessed, total: totalPhotos)
 
                     // Detect faces + generate embeddings
                     let observations = await FaceEmbeddingService.shared.detectFaces(in: cgImage)

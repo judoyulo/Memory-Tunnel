@@ -36,7 +36,7 @@ struct ChapterActionSheet: View {
                 VStack(spacing: Spacing.sm) {
                     if faceEmbedding != nil {
                         Button { showSuggestedPhotos = true } label: {
-                            Label("Find more photos by scanning", systemImage: "sparkle.magnifyingglass")
+                            Label(L.findMoreByScanning, systemImage: "sparkle.magnifyingglass")
                                 .font(.mtButton)
                                 .foregroundStyle(Color.mtBackground)
                                 .frame(maxWidth: .infinity)
@@ -47,7 +47,7 @@ struct ChapterActionSheet: View {
                     }
 
                     Button { showSendFlow = true } label: {
-                        Label("Add photos manually", systemImage: "photo.on.rectangle")
+                        Label(L.choosePhotosManually, systemImage: "photo.on.rectangle")
                             .font(.mtButton)
                             .foregroundStyle(Color.mtLabel)
                             .frame(maxWidth: .infinity)
@@ -59,7 +59,7 @@ struct ChapterActionSheet: View {
                     }
 
                     Button { onGoToChapter() } label: {
-                        Label("Go to chapter", systemImage: "book.fill")
+                        Label(L.viewInMemoryLane, systemImage: "book.fill")
                             .font(.mtButton)
                             .foregroundStyle(Color.mtLabel)
                             .frame(maxWidth: .infinity)
@@ -71,7 +71,7 @@ struct ChapterActionSheet: View {
                     }
 
                     Button { onDismiss() } label: {
-                        Text("Back to cards")
+                        Text(L.backToCards)
                             .font(.mtButton)
                             .foregroundStyle(Color.mtSecondary)
                             .padding(.vertical, 10)

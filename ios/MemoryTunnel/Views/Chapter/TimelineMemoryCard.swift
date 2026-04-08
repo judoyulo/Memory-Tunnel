@@ -84,10 +84,10 @@ struct JournalEntryCard: View {
         .onLongPressGesture { onEdit() }
         .contextMenu {
             Button { onEdit() } label: {
-                Label("Edit", systemImage: "pencil")
+                Label(L.edit, systemImage: "pencil")
             }
             Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
+                Label(L.delete, systemImage: "trash")
             }
         }
     }
@@ -105,8 +105,8 @@ struct JournalEntryCard: View {
 
     private var senderLabel: String {
         let isOwn = memory.ownerID == currentUserID
-        if isOwn { return "— You" }
-        return "— \(partnerName ?? "them")"
+        if isOwn { return L.senderYou }
+        return L.senderName(partnerName ?? "them")
     }
 
     // MARK: - Photo (prominent image with overlay metadata)
@@ -193,7 +193,7 @@ struct JournalEntryCard: View {
                 .font(.system(size: 28))
                 .foregroundStyle(Color.mtSecondary)
             VStack(alignment: .leading, spacing: 2) {
-                Text(memory.locationName ?? "Somewhere")
+                Text(memory.locationName ?? L.somewhere)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtLabel)
                 if let caption = memory.caption, !caption.isEmpty {
@@ -223,13 +223,13 @@ struct VoiceClipTileView: View {
             HStack {
                 Image(systemName: "waveform")
                     .foregroundStyle(Color.mtSecondary)
-                Text("Voice clip")
+                Text(L.voiceClip)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtSecondary)
                 Spacer()
 
                 if showError {
-                    Button("Retry") { Task { await downloadAndPlay() } }
+                    Button(L.tryAgain) { Task { await downloadAndPlay() } }
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtLabel)
                 } else {

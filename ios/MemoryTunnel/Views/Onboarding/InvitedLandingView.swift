@@ -24,14 +24,14 @@ struct InvitedLandingView: View {
                     Image(systemName: "exclamationmark.circle")
                         .font(.system(size: 48))
                         .foregroundStyle(Color.mtTertiary)
-                    Text("Couldn't load invitation")
+                    Text(L.couldntLoadInvitation)
                         .font(.mtTitle)
                         .foregroundStyle(Color.mtLabel)
                     Text(errorMessage)
                         .font(.mtBody)
                         .foregroundStyle(Color.mtSecondary)
                         .multilineTextAlignment(.center)
-                    Button("Try again") {
+                    Button(L.tryAgain) {
                         self.errorMessage = nil
                         isLoading = true
                         Task { await loadPreview() }
@@ -39,7 +39,7 @@ struct InvitedLandingView: View {
                     .font(.mtButton)
                     .foregroundStyle(Color.mtLabel)
                     Spacer()
-                    Button("Skip to sign up") { showAuth = true }
+                    Button(L.skipToSignUp) { showAuth = true }
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
                         .padding(.bottom, Spacing.xxl)
@@ -75,12 +75,12 @@ struct InvitedLandingView: View {
 
             // Invitation message
             VStack(spacing: Spacing.sm) {
-                Text("\(preview.inviterName) invited you")
+                Text(L.invitedYou(preview.inviterName))
                     .font(.mtDisplay)
                     .foregroundStyle(Color.mtLabel)
 
                 if let name = preview.chapterName {
-                    Text("to the chapter \"\(name)\"")
+                    Text(L.toTheMemoryLane(name))
                         .font(.mtBody)
                         .foregroundStyle(Color.mtSecondary)
                 }
@@ -91,11 +91,11 @@ struct InvitedLandingView: View {
 
             // CTAs
             VStack(spacing: Spacing.md) {
-                PrimaryButton(title: "Join & Add Your Memories", isLoading: false) {
+                PrimaryButton(title: L.joinAndAdd, isLoading: false) {
                     showAuth = true
                 }
 
-                Text("You'll create an account to join this chapter.")
+                Text(L.youllCreateAccount)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtTertiary)
                     .multilineTextAlignment(.center)

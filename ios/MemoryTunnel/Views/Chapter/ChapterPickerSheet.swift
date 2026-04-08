@@ -11,14 +11,14 @@ struct ChapterPickerSheet: View {
     var body: some View {
         NavigationView {
             VStack(spacing: Spacing.lg) {
-                Text("Which chapter?")
+                Text(L.memoryLanes)
                     .font(.mtTitle)
                     .foregroundStyle(Color.mtLabel)
                     .padding(.top, Spacing.xl)
 
                 if chapters.isEmpty {
                     Spacer()
-                    Text("No chapters linked yet")
+                    Text(L.couldntLoadMemoryLanes)
                         .font(.mtBody)
                         .foregroundStyle(Color.mtSecondary)
                     Spacer()
@@ -56,7 +56,7 @@ struct ChapterPickerSheet: View {
                                             Text(chapter.partnerName)
                                                 .font(.mtLabel)
                                                 .foregroundStyle(Color.mtLabel)
-                                            Text("View in chapter")
+                                            Text(L.viewInMemoryLane)
                                                 .font(.mtCaption)
                                                 .foregroundStyle(Color.mtSecondary)
                                         }
@@ -84,7 +84,7 @@ struct ChapterPickerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.cancel) { dismiss() }
                 }
             }
             .task { await loadFaceCrops() }

@@ -5,23 +5,29 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var router: NotificationRouter
+    @AppStorage("appLanguage") private var language: String = "en"
     @State private var selectedTab: Tab = .home
     #if DEBUG
     @State private var showDiagnostic = false
     #endif
 
-    enum Tab { case home, chapters }
+    enum Tab { case home, chapters, settings }
 
     var body: some View {
         TabView(selection: $selectedTab) {
             DailyCardContainerView()
-                .tabItem { Label("Today", systemImage: "photo.fill") }
+                .tabItem { Label(language == "zh-Hans" ? "今日闪回" : "Flashback", systemImage: "photo.fill") }
                 .tag(Tab.home)
 
             ChapterListView()
-                .tabItem { Label("Chapters", systemImage: "person.2.fill") }
+                .tabItem { Label(language == "zh-Hans" ? "记忆空间" : "Memory Lanes", systemImage: "person.2.fill") }
                 .tag(Tab.chapters)
+
+            SettingsView()
+                .tabItem { Label(language == "zh-Hans" ? "设置" : "Settings", systemImage: "gearshape") }
+                .tag(Tab.settings)
         }
+        .id(language) // Force TabView recreation on language change
         .tint(Color.mtLabel)
         .onAppear {
             // Always start on Today tab

@@ -37,7 +37,7 @@ struct MemoryEditSheet: View {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     // Caption
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Caption")
+                        Text(L.caption)
                             .font(.mtCaption)
                             .foregroundStyle(Color.mtTertiary)
                         TextEditor(text: $caption)
@@ -64,7 +64,7 @@ struct MemoryEditSheet: View {
                     } label: {
                         HStack {
                             Image(systemName: "trash")
-                            Text("Delete memory")
+                            Text(L.deleteMemory)
                         }
                         .font(.mtBody)
                         .foregroundStyle(Color(red: 0.878, green: 0.31, blue: 0.31)) // #E04F4F
@@ -76,15 +76,15 @@ struct MemoryEditSheet: View {
                 .padding(Spacing.xl)
             }
             .background(Color.mtBackground)
-            .navigationTitle("Edit memory")
+            .navigationTitle(L.editMemory)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.cancel) { dismiss() }
                         .foregroundStyle(Color.mtSecondary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    Button(L.save) {
                         Task { await save() }
                     }
                     .font(.mtButton)

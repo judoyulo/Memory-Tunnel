@@ -33,7 +33,7 @@ struct TextComposerView: View {
                         .clipShape(RoundedRectangle(cornerRadius: Radius.button))
                         .overlay(alignment: .topLeading) {
                             if text.isEmpty {
-                                Text("Write a memory, thought, or note...")
+                                Text(L.writeMemoryPlaceholder)
                                     .font(.system(size: 17))
                                     .foregroundStyle(Color.mtTertiary)
                                     .padding(Spacing.sm)
@@ -53,15 +53,15 @@ struct TextComposerView: View {
                 .padding(Spacing.xl)
             }
             .background(Color.mtBackground)
-            .navigationTitle("Write something")
+            .navigationTitle(L.writeSomething)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.cancel) { dismiss() }
                         .foregroundStyle(Color.mtSecondary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
+                    Button(L.save) {
                         let content = text
                         let loc = locationName.isEmpty ? nil : locationName
                         let tags = Array(emotionTags)

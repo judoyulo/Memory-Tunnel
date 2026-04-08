@@ -39,6 +39,7 @@ final class SmartStartViewModel: ObservableObject {
     @Published var state: SmartStartState = .intro
     @Published var suggestions: [FaceSuggestion] = []
     @Published var scanTimedOut = false
+    @Published var facesFound: Int = 0
     @Published var caption: String = ""
     @Published var detectedFaces: [CGRect] = []
     @Published var errorMessage: String?
@@ -63,16 +64,24 @@ final class SmartStartViewModel: ObservableObject {
         }
 
         scanTask = Task {
-            let results = await PhotoLibraryScanner.shared.scanForFrequentFaces()
+            let stream = await PhotoLibraryScanner.shared.scanFacesProgressively(
+                minPhotos: 500, maxPhotos: 500, maxFaces: 30
+            )
+            var latest: [FaceSuggestion] = []
+            for await snapshot in stream {
+                if Task.isCancelled { return }
+                latest = snapshot
+                facesFound = snapshot.count
+            }
 
             if Task.isCancelled { return }
 
             timeoutTask?.cancel()
 
-            if results.isEmpty {
+            if latest.isEmpty {
                 onComplete()
             } else {
-                suggestions = results
+                suggestions = latest
                 state = .suggestions
             }
         }
@@ -245,12 +254,12 @@ private struct SmartStartIntroScreen: View {
                     .foregroundStyle(Color.mtAccent)
 
                 VStack(spacing: Spacing.sm) {
-                    Text("Who do you want\nto stay close to?")
+                    Text(L.whoStayClose)
                         .font(.mtEmptyTitle)
                         .foregroundStyle(Color.mtLabel)
                         .multilineTextAlignment(.center)
 
-                    Text("Memory Tunnel can suggest\npeople from your photos —\non your device, privately.")
+                    Text(L.smartStartBody)
                         .font(.mtBody)
                         .foregroundStyle(Color.mtSecondary)
                         .multilineTextAlignment(.center)
@@ -264,7 +273,7 @@ private struct SmartStartIntroScreen: View {
                 Button {
                     vm.requestAndScan()
                 } label: {
-                    Text("Allow access to Photos")
+                    Text(L.allowPhotos)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -278,7 +287,7 @@ private struct SmartStartIntroScreen: View {
                     UserDefaults.standard.set(true, forKey: "smartStartCompleted")
                     vm.onComplete()
                 } label: {
-                    Text("Skip this step")
+                    Text(L.skipThisStep)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
@@ -302,22 +311,23 @@ private struct SmartStartIntroScreen: View {
 
 private struct SmartStartScanningScreen: View {
     @ObservedObject var vm: SmartStartViewModel
+    @ObservedObject var scanProgress = PhotoLibraryScanner.scanProgress
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            VStack(spacing: Spacing.lg) {
-                ProgressView()
-                    .scaleEffect(1.2)
+            ScanProgressRing(
+                scanned: scanProgress.scanned,
+                total: scanProgress.total,
+                facesFound: vm.facesFound
+            )
 
-                Text(vm.scanTimedOut
-                     ? "This is taking longer than usual…"
-                     : "Finding the people you care about…")
-                    .font(.mtBody)
-                    .foregroundStyle(Color.mtSecondary)
-                    .multilineTextAlignment(.center)
-                    .animation(.default, value: vm.scanTimedOut)
+            if vm.scanTimedOut {
+                Text(L.takingASec)
+                    .font(.mtCaption)
+                    .foregroundStyle(Color.mtTertiary)
+                    .padding(.top, Spacing.md)
             }
 
             Spacer()
@@ -325,7 +335,7 @@ private struct SmartStartScanningScreen: View {
             Button {
                 vm.cancelScan()
             } label: {
-                Text("Skip for now")
+                Text(L.skipForNow)
                     .font(.mtButton)
                     .foregroundStyle(Color.mtLabel)
                     .frame(maxWidth: .infinity)
@@ -354,10 +364,10 @@ private struct SmartStartSuggestionsScreen: View {
                 VStack(spacing: 0) {
                     // Header
                     VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("People from your photos")
+                        Text(L.peopleFromPhotos)
                             .font(.mtEmptyTitle)
                             .foregroundStyle(Color.mtLabel)
-                        Text("Start a chapter with someone who matters.")
+                        Text(L.startAMemoryLaneWithSomeone)
                             .font(.mtBody)
                             .foregroundStyle(Color.mtSecondary)
                     }
@@ -396,7 +406,7 @@ private struct SmartStartSuggestionsScreen: View {
                     UserDefaults.standard.set(true, forKey: "smartStartCompleted")
                     vm.onComplete()
                 } label: {
-                    Text("Skip — I'll do this later")
+                    Text(L.skipDoLater)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
@@ -441,7 +451,7 @@ private struct FaceCardRow: View {
 
                     // Name field — underline only style
                     VStack(alignment: .leading, spacing: 4) {
-                        TextField("Their name", text: vm.nameBinding(for: index))
+                        TextField(L.theirName, text: vm.nameBinding(for: index))
                             .font(.mtBody)
                             .foregroundStyle(Color.mtLabel)
                             .focused($focused)
@@ -461,7 +471,7 @@ private struct FaceCardRow: View {
                     vm.openPhotoPicker(for: index)
                 } label: {
                     HStack {
-                        Text("Start a chapter")
+                        Text(L.startAMemoryLane)
                         Image(systemName: "arrow.right")
                     }
                     .font(.mtButton)
@@ -476,8 +486,8 @@ private struct FaceCardRow: View {
                 .padding(.bottom, Spacing.md)
                 .accessibilityLabel(
                     nameIsEmpty
-                    ? "Enter a name to start a chapter"
-                    : "Start a chapter with \(suggestion.name)"
+                    ? "Enter a name to start a memory lane"
+                    : "Start a memory lane with \(suggestion.name)"
                 )
             }
         }
@@ -508,10 +518,10 @@ struct SmartStartPhotoPicker: View {
 
                 if assets.isEmpty {
                     VStack(spacing: Spacing.md) {
-                        Text("No photos found")
+                        Text(L.noPhotosFound)
                             .font(.mtTitle)
                             .foregroundStyle(Color.mtLabel)
-                        Button("Go back") {
+                        Button(L.goBack) {
                             vm.state = .suggestions
                         }
                         .font(.mtButton)
@@ -548,12 +558,12 @@ struct SmartStartPhotoPicker: View {
             }
             .navigationTitle({
                 let name = suggestionIndex < vm.suggestions.count ? vm.suggestions[suggestionIndex].name : ""
-                return "Photos with \(name.isEmpty ? "this person" : name)"
+                return L.photosWithName(name)
             }())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Back") { vm.state = .suggestions }
+                    Button(L.back) { vm.state = .suggestions }
                         .foregroundStyle(Color.mtSecondary)
                 }
             }
@@ -590,7 +600,7 @@ private struct SmartStartCaptionScreen: View {
                 .overlay(FaceOverlayView(faces: vm.detectedFaces))
 
             VStack(alignment: .leading, spacing: Spacing.md) {
-                TextField("Add a caption… (optional)", text: $vm.caption, axis: .vertical)
+                TextField(L.captionOptional, text: $vm.caption, axis: .vertical)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtLabel)
                     .focused($captionFocused)
@@ -603,7 +613,7 @@ private struct SmartStartCaptionScreen: View {
                     captionFocused = false
                     Task { await vm.send(index: suggestionIndex, image: image) }
                 } label: {
-                    Text("Save memory")
+                    Text(L.saveMemory)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -626,7 +636,7 @@ private struct SmartStartUploadingScreen: View {
         VStack(spacing: Spacing.lg) {
             Spacer()
             ProgressView()
-            Text("Saving memory…")
+            Text(L.savingMemory)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
@@ -656,11 +666,11 @@ private struct SmartStartCompleteScreen: View {
                     .foregroundStyle(Color.mtAccent)
             }
 
-            Text("Memory saved")
+            Text(L.memorySaved)
                 .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
 
-            Text("Ready to invite \(personName)?")
+            Text(L.readyToInvite(personName))
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -673,7 +683,7 @@ private struct SmartStartCompleteScreen: View {
                     Button {
                         showShareSheet = true
                     } label: {
-                        Text("Invite \(personName)")
+                        Text(L.invite(personName))
                             .font(.mtButton)
                             .foregroundStyle(Color.mtBackground)
                             .frame(maxWidth: .infinity)
@@ -694,7 +704,7 @@ private struct SmartStartCompleteScreen: View {
                     UserDefaults.standard.set(true, forKey: "smartStartCompleted")
                     vm.saveLater()
                 } label: {
-                    Text("Save for later")
+                    Text(L.saveForLater)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)

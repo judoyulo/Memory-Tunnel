@@ -112,7 +112,7 @@ struct VoiceFlowView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     if case .sent = vm.step { EmptyView() }
                     else {
-                        Button("Cancel") {
+                        Button(L.cancel) {
                             recorder.cancelRecording()
                             dismiss()
                         }
@@ -182,10 +182,10 @@ private struct PreviewStep: View {
             Spacer()
 
             VStack(spacing: Spacing.md) {
-                Text("Preview")
+                Text(L.preview)
                     .font(.mtDisplay)
                     .foregroundStyle(Color.mtLabel)
-                Text("Sounds good?")
+                Text(L.soundsGood)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtSecondary)
             }
@@ -200,7 +200,7 @@ private struct PreviewStep: View {
                 Button {
                     vm.step = .caption
                 } label: {
-                    Text("Looks good — continue")
+                    Text(L.looksGoodContinue)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -209,7 +209,7 @@ private struct PreviewStep: View {
                         .clipShape(RoundedRectangle(cornerRadius: Radius.button))
                 }
 
-                Button("Record again") { vm.retake() }
+                Button(L.recordAgain) { vm.retake() }
                     .font(.mtLabel)
                     .foregroundStyle(Color.mtSecondary)
             }
@@ -238,7 +238,7 @@ private struct VoiceCaptionStep: View {
             }
 
             VStack(spacing: Spacing.md) {
-                TextField("Add a caption… (optional)", text: $vm.caption, axis: .vertical)
+                TextField(L.captionOptional, text: $vm.caption, axis: .vertical)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtLabel)
                     .lineLimit(3)
@@ -251,7 +251,7 @@ private struct VoiceCaptionStep: View {
                     focused = false
                     Task { await vm.send() }
                 } label: {
-                    Text("Send")
+                    Text(L.send)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -274,7 +274,7 @@ private struct VoiceSendingStep: View {
         VStack(spacing: Spacing.lg) {
             Spacer()
             ProgressView()
-            Text("Sending…")
+            Text(L.sending)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
@@ -300,15 +300,15 @@ private struct VoiceSentStep: View {
                     .foregroundStyle(Color.mtAccent)
             }
 
-            Text("Voice clip sent")
+            Text(L.voiceClipSent)
                 .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
 
-            Text("Come back tomorrow.")
+            Text(L.comeBackTomorrowShort)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
 
-            Button("Done") { dismiss() }
+            Button(L.done) { dismiss() }
                 .font(.mtLabel)
                 .foregroundStyle(Color.mtSecondary)
 
@@ -327,14 +327,14 @@ private struct VoiceErrorStep: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
-            Text("Something went wrong")
+            Text(L.somethingWentWrong)
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
             Text(message)
                 .font(.mtCaption)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
-            Button("Try again", action: retry)
+            Button(L.tryAgain, action: retry)
                 .font(.mtLabel)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
