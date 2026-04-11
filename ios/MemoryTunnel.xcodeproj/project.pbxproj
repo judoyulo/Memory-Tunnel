@@ -578,7 +578,7 @@
 		8A53A130897E3AE5CA586318 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				API_BASE_URL = "http://192.168.1.251:3000";
+				API_BASE_URL = "http://JY-Personal-Air.local:3000";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;

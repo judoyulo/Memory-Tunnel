@@ -3,6 +3,11 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  # Allow .local mDNS hostnames + LAN IPs from physical iOS devices in dev
+  config.hosts << /.*\.local/
+  config.hosts << /192\.168\.\d+\.\d+/
+  config.hosts << /10\.\d+\.\d+\.\d+/
+
   # Make code changes take effect immediately without server restart.
   config.enable_reloading = true
 
