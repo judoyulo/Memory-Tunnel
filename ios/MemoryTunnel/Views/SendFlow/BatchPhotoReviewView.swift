@@ -51,7 +51,7 @@ struct BatchPhotoReviewView: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
                             if mode == .choosing || mode == .editing {
-                                Button("Cancel") { dismiss() }
+                                Button(L.cancel) { dismiss() }
                             }
                         }
                     }
@@ -81,7 +81,7 @@ struct BatchPhotoReviewView: View {
                 }
             }
 
-            Text("\(allImages.count) photo\(allImages.count == 1 ? "" : "s") selected")
+            Text(L.photosSelected(allImages.count))
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
 
@@ -91,7 +91,7 @@ struct BatchPhotoReviewView: View {
                 // Find more photos by scanning
                 if faceEmbedding != nil {
                     Button { mode = .scanning } label: {
-                        Label("Find more photos of this person", systemImage: "sparkle.magnifyingglass")
+                        Label(L.findMorePhotos, systemImage: "sparkle.magnifyingglass")
                             .font(.mtButton)
                             .foregroundStyle(Color.mtLabel)
                             .frame(maxWidth: .infinity)
@@ -101,7 +101,7 @@ struct BatchPhotoReviewView: View {
                 }
 
                 Button { mode = .editing } label: {
-                    Label("Add details to each photo", systemImage: "pencil")
+                    Label(L.addDetailsToEach, systemImage: "pencil")
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -111,7 +111,7 @@ struct BatchPhotoReviewView: View {
                 }
 
                 Button { startUpload() } label: {
-                    Text("Add all directly")
+                    Text(L.addAllDirectly)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
@@ -132,12 +132,12 @@ struct BatchPhotoReviewView: View {
     @ViewBuilder
     private var editingView: some View {
         if allImages.isEmpty {
-            Text("No photos")
+            Text(L.noPhotos)
         } else {
             let safeIndex = min(currentIndex, allImages.count - 1)
             VStack(spacing: 0) {
 
-            Text("Photo \(safeIndex + 1) of \(allImages.count)")
+            Text(L.photoNOfTotal(safeIndex + 1, allImages.count))
                 .font(.mtCaption)
                 .foregroundStyle(Color.mtSecondary)
                 .padding(.top, Spacing.sm)
@@ -151,7 +151,7 @@ struct BatchPhotoReviewView: View {
                         .clipShape(RoundedRectangle(cornerRadius: Radius.card))
 
                     if safeIndex < captions.count {
-                        TextField("Add a caption (optional)", text: $captions[safeIndex])
+                        TextField(L.addCaption, text: $captions[safeIndex])
                             .font(.mtBody)
                             .padding(12)
                             .background(Color.mtSurface)
@@ -173,7 +173,7 @@ struct BatchPhotoReviewView: View {
             HStack(spacing: Spacing.md) {
                 if safeIndex > 0 {
                     Button { currentIndex -= 1 } label: {
-                        Text("Previous")
+                        Text(L.previous)
                             .font(.mtButton)
                             .foregroundStyle(Color.mtLabel)
                             .frame(maxWidth: .infinity)
@@ -192,7 +192,7 @@ struct BatchPhotoReviewView: View {
                         startUpload()
                     }
                 } label: {
-                    Text(safeIndex < allImages.count - 1 ? "Next" : "Add all")
+                    Text(safeIndex < allImages.count - 1 ? L.next : L.addAll)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -213,7 +213,7 @@ struct BatchPhotoReviewView: View {
         VStack(spacing: Spacing.md) {
             Spacer()
             ProgressView()
-            Text("Uploading \(uploadedCount)/\(totalToUpload)...")
+            Text(L.uploading(uploadedCount, totalToUpload))
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
@@ -228,7 +228,7 @@ struct BatchPhotoReviewView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 56))
                 .foregroundStyle(Color.mtAccent)
-            Text("\(uploadedCount) photo\(uploadedCount == 1 ? "" : "s") added")
+            Text(L.photosAdded(uploadedCount))
                 .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
             Spacer()
@@ -236,7 +236,7 @@ struct BatchPhotoReviewView: View {
                 onDone()
                 dismiss()
             } label: {
-                Text("Done")
+                Text(L.done)
                     .font(.mtButton)
                     .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
@@ -283,11 +283,7 @@ struct BatchPhotoReviewView: View {
                     print("[BatchUpload] failed: \(error)")
                 }
             }
-            if embedded {
-                onDone()
-            } else {
-                mode = .done
-            }
+            mode = .done
         }
     }
 

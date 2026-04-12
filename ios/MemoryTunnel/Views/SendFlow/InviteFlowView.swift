@@ -133,7 +133,7 @@ struct InviteFlowView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     if case .done = vm.step { EmptyView() }
                     else {
-                        Button("Cancel") { dismiss() }
+                        Button(L.cancel) { dismiss() }
                             .foregroundStyle(Color.mtSecondary)
                     }
                 }
@@ -153,19 +153,19 @@ private struct InviteNameStep: View {
             Spacer()
 
             VStack(spacing: Spacing.md) {
-                Text("Who do you want\nto stay close to?")
+                Text(L.whoStayClose)
                     .font(.mtDisplay)
                     .foregroundStyle(Color.mtLabel)
                     .multilineTextAlignment(.center)
 
-                Text("Their name helps you remember\nwhy this chapter matters.")
+                Text(L.theirNameHelps)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }
 
-            TextField("Their name", text: $vm.personName)
+            TextField(L.theirName, text: $vm.personName)
                 .font(.mtBody)
                 .padding(Spacing.md)
                 .background(Color.mtSurface)
@@ -177,7 +177,7 @@ private struct InviteNameStep: View {
             Button {
                 vm.proceedToPhoto()
             } label: {
-                Text("Choose a photo")
+                Text(L.chooseAPhoto)
                     .font(.mtButton)
                     .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
@@ -203,19 +203,19 @@ private struct InvitePhotoStep: View {
             Spacer()
 
             VStack(spacing: Spacing.md) {
-                Text("Send them a first memory")
+                Text(L.sendThemFirst)
                     .font(.mtDisplay)
                     .foregroundStyle(Color.mtLabel)
                     .multilineTextAlignment(.center)
 
-                Text("A photo that makes you think of them.")
+                Text(L.photoThatMakesYouThink)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtSecondary)
                     .multilineTextAlignment(.center)
             }
 
             PhotosPicker(selection: $vm.selectedItem, matching: .images) {
-                Label("Open Photos", systemImage: "photo.on.rectangle")
+                Label(L.openPhotos, systemImage: "photo.on.rectangle")
                     .font(.mtButton)
                     .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
@@ -253,7 +253,7 @@ private struct InviteCaptionStep: View {
             }
 
             VStack(alignment: .leading, spacing: Spacing.md) {
-                TextField("Add a caption… (optional)", text: $vm.caption, axis: .vertical)
+                TextField(L.captionOptional, text: $vm.caption, axis: .vertical)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtLabel)
                     .focused($captionFocused)
@@ -266,7 +266,7 @@ private struct InviteCaptionStep: View {
                     captionFocused = false
                     Task { await vm.send() }
                 } label: {
-                    Text("Send & invite")
+                    Text(L.sendAndInvite)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -289,7 +289,7 @@ private struct InviteSendingStep: View {
         VStack(spacing: Spacing.lg) {
             Spacer()
             ProgressView()
-            Text("Creating your chapter…")
+            Text(L.creatingYourMemoryLane)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
@@ -318,11 +318,11 @@ private struct InviteDoneStep: View {
                     .foregroundStyle(Color.mtAccent)
             }
 
-            Text("Memory sent")
+            Text(L.memorySent)
                 .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
 
-            Text("Share the link so they can\njoin your chapter.")
+            Text(L.shareLinkToJoin)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -332,7 +332,7 @@ private struct InviteDoneStep: View {
                 Button {
                     showShareSheet = true
                 } label: {
-                    Label("Share invite link", systemImage: "square.and.arrow.up")
+                    Label(L.shareInviteLink, systemImage: "square.and.arrow.up")
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
@@ -347,7 +347,7 @@ private struct InviteDoneStep: View {
                 }
             }
 
-            Button("Done") { dismiss() }
+            Button(L.done) { dismiss() }
                 .font(.mtLabel)
                 .foregroundStyle(Color.mtSecondary)
 
@@ -366,14 +366,14 @@ private struct InviteErrorStep: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
-            Text("Something went wrong")
+            Text(L.somethingWentWrong)
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
             Text(message)
                 .font(.mtCaption)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
-            Button("Try again", action: retry)
+            Button(L.tryAgain, action: retry)
                 .font(.mtLabel)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()

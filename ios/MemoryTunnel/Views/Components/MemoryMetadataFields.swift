@@ -18,14 +18,14 @@ struct MemoryMetadataFields: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             // Location
             VStack(alignment: .leading, spacing: 4) {
-                Text("Where was this?")
+                Text(L.whereWasThis)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtTertiary)
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: "mappin")
                         .font(.system(size: 12))
                         .foregroundStyle(Color.mtSecondary)
-                    TextField("Add a location", text: $locationName)
+                    TextField(L.addALocation, text: $locationName)
                         .font(.mtBody)
                         .foregroundStyle(Color.mtLabel)
                 }
@@ -36,7 +36,7 @@ struct MemoryMetadataFields: View {
 
             // Event date
             VStack(alignment: .leading, spacing: 4) {
-                Text("When was this?")
+                Text(L.whenWasThis)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtTertiary)
 
@@ -62,7 +62,7 @@ struct MemoryMetadataFields: View {
                                     .foregroundStyle(Color.mtTertiary)
                             }
                         } else {
-                            Text("Add a date")
+                            Text(L.addADate)
                                 .font(.mtBody)
                                 .foregroundStyle(Color.mtTertiary)
                             Spacer()
@@ -83,7 +83,7 @@ struct MemoryMetadataFields: View {
 
             // Emotion tags
             VStack(alignment: .leading, spacing: 4) {
-                Text("How does this feel?")
+                Text(L.howDoesThisFeel)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtTertiary)
 

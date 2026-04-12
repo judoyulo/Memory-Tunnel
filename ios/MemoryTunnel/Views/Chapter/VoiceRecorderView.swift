@@ -80,7 +80,7 @@ struct VoiceRecorderView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 12))
-                            Text("Discard")
+                            Text(L.discard)
                                 .font(.mtCaption)
                         }
                         .foregroundStyle(Color.mtSecondary)
@@ -89,7 +89,7 @@ struct VoiceRecorderView: View {
 
                 // Caption field
                 if recorder.hasRecording && !recorder.isRecording {
-                    TextField("Add a caption...", text: $caption)
+                    TextField(L.addCaptionPlaceholder, text: $caption)
                         .font(.mtBody)
                         .padding(Spacing.sm)
                         .background(Color.mtSurface)
@@ -101,16 +101,16 @@ struct VoiceRecorderView: View {
             }
             .padding(Spacing.xl)
             .background(Color.mtBackground)
-            .navigationTitle("Voice clip")
+            .navigationTitle(L.voiceClip)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.cancel) { dismiss() }
                         .foregroundStyle(Color.mtSecondary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if recorder.hasRecording && !recorder.isRecording {
-                        Button("Send") {
+                        Button(L.send) {
                             Task {
                                 await recorder.upload(chapterID: chapterID, caption: caption)
                                 onComplete()

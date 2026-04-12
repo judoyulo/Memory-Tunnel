@@ -24,20 +24,20 @@ struct ChapterFaceConfirmationView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: Spacing.lg) {
-                Text("Which face is \(partnerName)?")
+                Text(L.whichFace(partnerName))
                     .font(.mtTitle)
                     .foregroundStyle(Color.mtLabel)
                     .multilineTextAlignment(.center)
                     .padding(.top, Spacing.lg)
 
-                Text("This helps find their photos in your library")
+                Text(L.helpsFindPhotos)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtSecondary)
 
                 // Show existing linked face if any
                 if let crop = existingFaceCrop {
                     VStack(spacing: 6) {
-                        Text("Current face")
+                        Text(L.currentFace)
                             .font(.mtCaption)
                             .foregroundStyle(Color.mtSecondary)
                         Image(uiImage: crop)
@@ -52,7 +52,7 @@ struct ChapterFaceConfirmationView: View {
                 if isScanning {
                     Spacer()
                     ProgressView()
-                    Text("Scanning chapter photos...")
+                    Text(L.scanningMemoryLanePhotos)
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
                     Spacer()
@@ -61,7 +61,7 @@ struct ChapterFaceConfirmationView: View {
                     Image(systemName: "face.dashed")
                         .font(.system(size: 40))
                         .foregroundStyle(Color.mtTertiary)
-                    Text("No faces found in chapter photos.\nAdd some photos first.")
+                    Text(L.noFacesInPhotos)
                         .font(.mtBody)
                         .foregroundStyle(Color.mtSecondary)
                         .multilineTextAlignment(.center)
@@ -71,10 +71,10 @@ struct ChapterFaceConfirmationView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 48))
                         .foregroundStyle(Color.mtAccent)
-                    Text("Face saved for \(partnerName)")
+                    Text(L.faceSaved(partnerName))
                         .font(.mtTitle)
                         .foregroundStyle(Color.mtLabel)
-                    Text("The app will now recognize them across your photo library")
+                    Text(L.appWillRecognize)
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
                         .multilineTextAlignment(.center)
@@ -126,7 +126,7 @@ struct ChapterFaceConfirmationView: View {
                 }
 
                 if saved {
-                    Button("Done") { dismiss() }
+                    Button(L.done) { dismiss() }
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .padding(.bottom, Spacing.md)
@@ -137,7 +137,7 @@ struct ChapterFaceConfirmationView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.cancel) { dismiss() }
                 }
             }
             .task {

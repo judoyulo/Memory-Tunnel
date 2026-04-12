@@ -32,12 +32,13 @@ struct FeedCard: Identifiable {
     var matchedChapterID: String?
     var matchedPartnerName: String?
     var allChapterMatches: [(chapterID: String, partnerName: String)] = []
+    var photoDepth: Int = 0  // How deep in the library this photo was found
 
     var tagText: String {
         switch type {
-        case .newFace:       return "NEW FACE"
-        case .unsavedMemory: return "UNSAVED MEMORY"
-        case .added:         return "ADDED"
+        case .newFace:       return L.newFace
+        case .unsavedMemory: return L.unsavedMemory
+        case .added:         return L.added
         }
     }
 
@@ -55,10 +56,11 @@ struct FeedCard: Identifiable {
 actor TodayFeedService {
 
     static let shared = TodayFeedService()
+    @MainActor static let scanProgress = ScanProgressTracker()
     private init() {}
 
-    /// Max appearances per face in the feed (unless part of a group photo with other faces).
-    private static let maxFaceAppearances = 1
+    /// Max appearances per face in the feed. Multi-face photos get 2x allowance.
+    private static let maxFaceAppearances = 3
 
     /// Build a shuffled feed of cards, balanced ~1:1 between new faces and unsaved memories.
     /// 20 cards per day.
@@ -99,9 +101,19 @@ actor TodayFeedService {
 
         var assetList: [PHAsset] = []
         allAssets.enumerateObjects { asset, _, _ in assetList.append(asset) }
+
+        // Map each asset to its real library position (before shuffle)
+        // Position 0 = most recent photo, position N = oldest
+        var assetDepth: [String: Int] = [:]
+        for (idx, asset) in assetList.enumerated() {
+            assetDepth[asset.localIdentifier] = idx
+        }
+        let totalLibrarySize = assetList.count
+
         assetList.shuffle()
 
-        let scanLimit = min(assetList.count, 800)
+        let scanLimit = min(assetList.count, 1500)
+        TodayFeedService.scanProgress.update(scanned: 0, total: scanLimit)
 
         var newFaceCards: [FeedCard] = []
         var unsavedMemoryCards: [FeedCard] = []
@@ -142,7 +154,10 @@ actor TodayFeedService {
 
             let asset = assetList[i]
 
-            if i % 10 == 0 { await Task.yield() }
+            if i % 10 == 0 {
+                await Task.yield()
+                TodayFeedService.scanProgress.update(scanned: i, total: scanLimit)
+            }
 
             guard let image = await loadImage(for: asset),
                   let cgImage = image.cgImage else { continue }
@@ -196,6 +211,7 @@ actor TodayFeedService {
 
                 if let match = bestMatch {
                     if (newFaceCards.count + unsavedMemoryCards.count) < maxCards {
+                        let depth = assetDepth[asset.localIdentifier] ?? i
                         unsavedMemoryCards.append(FeedCard(
                             type: .unsavedMemory,
                             asset: asset,
@@ -203,12 +219,14 @@ actor TodayFeedService {
                             faceObservation: obs,
                             embedding: result.embedding,
                             matchedChapterID: match.chapterID,
-                            matchedPartnerName: match.partnerName
+                            matchedPartnerName: match.partnerName,
+                            photoDepth: depth
                         ))
                     }
                 } else {
                     // New face: no chapter for this person
                     if (newFaceCards.count + unsavedMemoryCards.count) < maxCards {
+                        let depth = assetDepth[asset.localIdentifier] ?? i
                         newFaceCards.append(FeedCard(
                             type: .newFace,
                             asset: asset,
@@ -216,7 +234,8 @@ actor TodayFeedService {
                             faceObservation: obs,
                             embedding: result.embedding,
                             matchedChapterID: nil,
-                            matchedPartnerName: nil
+                            matchedPartnerName: nil,
+                            photoDepth: depth
                         ))
                     }
                 }

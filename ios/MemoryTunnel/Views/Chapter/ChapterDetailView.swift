@@ -17,7 +17,19 @@ final class ChapterDetailViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            memories = try await APIClient.shared.memories(chapterID: chapterID)
+            // 15-second timeout to prevent freeze on hung API
+            memories = try await withThrowingTaskGroup(of: [Memory].self) { group in
+                group.addTask {
+                    try await APIClient.shared.memories(chapterID: self.chapterID)
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: 15_000_000_000)
+                    throw URLError(.timedOut)
+                }
+                let result = try await group.next()!
+                group.cancelAll()
+                return result
+            }
         } catch {
             print("[ChapterDetail] load error: \(error)")
             errorMessage = error.localizedDescription
@@ -234,7 +246,7 @@ struct ChapterDetailView: View {
         case .shareSheet:
             if chapter.partner != nil {
                 ShareLink(item: URL(string: "https://app.memorytunnel.com/i/\(chapter.id)")!) {
-                    Text("Share invite link")
+                    Text(L.shareInviteLink)
                 }
             }
         case .suggestedPhotos:
@@ -272,10 +284,10 @@ struct ChapterDetailView: View {
             Image(systemName: "book.closed.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(Color.mtAccent)
-            Text("Start this chapter")
+            Text(L.startThisMemoryLane)
                 .font(.mtEmptyTitle)
                 .foregroundStyle(Color.mtLabel)
-            Text("Add your first memory.\nPhotos, voice clips, or just a few words.")
+            Text(L.addFirstMemoryBody)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -293,22 +305,22 @@ struct ChapterDetailView: View {
             Button {
                 showPhotoPicker = true
             } label: {
-                Label("Photos", systemImage: "photo.on.rectangle")
+                Label(L.photos, systemImage: "photo.on.rectangle")
             }
             Button {
                 activeSheet = .suggestedPhotos
             } label: {
-                Label("Find photos of \(chapter.partner?.displayName ?? "them")", systemImage: "sparkle.magnifyingglass")
+                Label(L.findPhotosOf(chapter.partner?.displayName ?? "them"), systemImage: "sparkle.magnifyingglass")
             }
             Button {
                 activeSheet = .voiceRecorder
             } label: {
-                Label("Voice clip", systemImage: "waveform")
+                Label(L.voiceClip, systemImage: "waveform")
             }
             Button {
                 activeSheet = .textComposer
             } label: {
-                Label("Write something", systemImage: "text.quote")
+                Label(L.writeSomething, systemImage: "text.quote")
             }
 
             Divider()
@@ -316,7 +328,7 @@ struct ChapterDetailView: View {
             Button {
                 activeSheet = .faceConfirmation
             } label: {
-                Label("Set \(chapter.partner?.displayName ?? "partner")'s face", systemImage: "face.smiling")
+                Label(L.setFace(chapter.partner?.displayName ?? "partner"), systemImage: "face.smiling")
             }
         } label: {
             Image(systemName: "plus")

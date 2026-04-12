@@ -16,8 +16,11 @@
 		15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9FA6F1F64C171D8F2E7EAC /* Models.swift */; };
 		1B38D92F29DDB4C8017703FE /* VoiceRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D58D70B2D52A721DE1405315 /* VoiceRecorderView.swift */; };
 		1B4F9FD1BDD6E7468248AE8C /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEB97A3C94A9313D9DBD54F /* WelcomeView.swift */; };
+		1A1111111111111111111111 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222222 /* L10n.swift */; };
+		1A3333333333333333333333 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A4444444444444444444444 /* SettingsView.swift */; };
 		1B9BE1CBAAF5A716615D3A2F /* InviteFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 622DA1C3E1E0F8D49A5B16C2 /* InviteFlowView.swift */; };
 		1C7659B18C71CE78B7B988DA /* FacePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F419AD02848138B876B61995 /* FacePickerSheet.swift */; };
+		1C7659B28C71CE78B7B988DB /* ShareCardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F419AD03848138B876B61996 /* ShareCardSheet.swift */; };
 		1C8C03739FFD1BCBE2B09DF5 /* ChapterCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2ACF05A03B2C2DBCA1625CE /* ChapterCreationView.swift */; };
 		1D45D81D499BE0168E5EEDBC /* TimelineScrubberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAD72C5FC7FBD6732960A84B /* TimelineScrubberView.swift */; };
 		1EF04101161480CAAE62B0F3 /* ChapterCreationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D810DCD3E7732FCB967BAC /* ChapterCreationViewModel.swift */; };
@@ -66,6 +69,7 @@
 		EF063DC5FDE9FE7F592483CF /* ZoomablePhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C06818DFC216B6331EC3BA /* ZoomablePhotoView.swift */; };
 		F07AE0C42CA641AB3D22A001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77E3D57DF35B477A9FC67124 /* OnboardingView.swift */; };
 		F58BE65332B6D250AD34F183 /* FaceClusterDiagnosticView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B8FB534078C4B3FF0D11EB4 /* FaceClusterDiagnosticView.swift */; };
+		F5A1B20155C274654432FE85 /* ScanProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC17F0577C7E7795737723A /* ScanProgressRing.swift */; };
 		F5AEB29055C274654432FE84 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBCB7F0577C7E7795737722A /* DesignTokens.swift */; };
 		F5F9BCB045B5C75F59BAB0F8 /* ChapterActionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D651C1D5049816E76024666 /* ChapterActionSheet.swift */; };
 		F61ED938FFDB51632282CB35 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 690DD1E433D7B3C88548F7B9 /* ContentView.swift */; };
@@ -99,13 +103,15 @@
 		616F463C1F1E291F1092BA0B /* ConversationTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationTimelineView.swift; sourceTree = "<group>"; };
 		622DA1C3E1E0F8D49A5B16C2 /* InviteFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFlowView.swift; sourceTree = "<group>"; };
 		690DD1E433D7B3C88548F7B9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1A2222222222222222222222 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		1A4444444444444444444444 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		6B9655209F364668AF229806 /* TimelineMemoryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineMemoryCard.swift; sourceTree = "<group>"; };
 		7163AA5FA993CC04AB76B3EA /* MemoryEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryEditSheet.swift; sourceTree = "<group>"; };
 		75EE9505EE7A0C330E994154 /* MemoryMetadataFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryMetadataFields.swift; sourceTree = "<group>"; };
 		77E3D57DF35B477A9FC67124 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		7A89C88545B1F49C8B7D9872 /* FaceDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceDetectionService.swift; sourceTree = "<group>"; };
 		7C3EE990F6ADD9AE96A0769B /* FaceBubbleLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceBubbleLayout.swift; sourceTree = "<group>"; };
-		89433FD903F414BB719F471F /* MobileFaceNet.mlpackage */ = {isa = PBXFileReference; path = MobileFaceNet.mlpackage; sourceTree = "<group>"; };
+		89433FD903F414BB719F471F /* MobileFaceNet.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = MobileFaceNet.mlpackage; sourceTree = "<group>"; };
 		8C89EE55C51AB7B5E469369E /* SuggestedPhotosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestedPhotosView.swift; sourceTree = "<group>"; };
 		8DEB97A3C94A9313D9DBD54F /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryTunnelApp.swift; sourceTree = "<group>"; };
@@ -126,13 +132,15 @@
 		D58D70B2D52A721DE1405315 /* VoiceRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRecorderView.swift; sourceTree = "<group>"; };
 		D700BC0C40A8FC3ADAD12A8B /* PhotoPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoPermissionView.swift; sourceTree = "<group>"; };
 		D821FFD559B90C5B72F78888 /* FaceScanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceScanSheet.swift; sourceTree = "<group>"; };
+		DBC17F0577C7E7795737723A /* ScanProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanProgressRing.swift; sourceTree = "<group>"; };
 		DBCB7F0577C7E7795737722A /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		E582EDFACC333CDF2C4F7EED /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		E765BE8B3CBE209441550145 /* BatchPhotoReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchPhotoReviewView.swift; sourceTree = "<group>"; };
-		E78CD8E3F994E55AD801203C /* MemoryTunnel.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = MemoryTunnel.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E78CD8E3F994E55AD801203C /* MemoryTunnel.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MemoryTunnel.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE06847419A79BDE2DE826FB /* DailyCardContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyCardContainerView.swift; sourceTree = "<group>"; };
 		F1D810DCD3E7732FCB967BAC /* ChapterCreationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterCreationViewModel.swift; sourceTree = "<group>"; };
 		F419AD02848138B876B61995 /* FacePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacePickerSheet.swift; sourceTree = "<group>"; };
+		F419AD03848138B876B61996 /* ShareCardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardSheet.swift; sourceTree = "<group>"; };
 		FA42016DEC51783FD832AB9E /* ChapterPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterPickerSheet.swift; sourceTree = "<group>"; };
 		FB76E740968FA6326B7AB5C0 /* BirthdayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirthdayService.swift; sourceTree = "<group>"; };
 		FB9FA6F1F64C171D8F2E7EAC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -202,6 +210,7 @@
 			children = (
 				1CB760502D99E6F5061C9EC2 /* AppIconView.swift */,
 				DBCB7F0577C7E7795737722A /* DesignTokens.swift */,
+				DBC17F0577C7E7795737723A /* ScanProgressRing.swift */,
 				75EE9505EE7A0C330E994154 /* MemoryMetadataFields.swift */,
 				3F8F866A6F13DC70F180DB20 /* PHAssetThumbnailView.swift */,
 				51CAE2455ACBEB181BAFFCFC /* RecordButton.swift */,
@@ -315,6 +324,7 @@
 				39C1EF24188FA35CA2389EEC /* Info.plist */,
 				5229DB016C5411DB03A5428D /* MemoryTunnel.entitlements */,
 				8F06E171BB62601C00B40B1E /* MemoryTunnelApp.swift */,
+				1A2222222222222222222222 /* L10n.swift */,
 				89433FD903F414BB719F471F /* MobileFaceNet.mlpackage */,
 			);
 			path = MemoryTunnel;
@@ -355,6 +365,7 @@
 			children = (
 				EE06847419A79BDE2DE826FB /* DailyCardContainerView.swift */,
 				F419AD02848138B876B61995 /* FacePickerSheet.swift */,
+				F419AD03848138B876B61996 /* ShareCardSheet.swift */,
 				191C0F35232D766850FA7A4A /* ReconnectionCardView.swift */,
 			);
 			path = DailyCard;
@@ -381,6 +392,7 @@
 				31A2FB4EAE1F4CA130972DF4 /* Onboarding */,
 				DCD844C305E23613C684F23F /* SendFlow */,
 				690DD1E433D7B3C88548F7B9 /* ContentView.swift */,
+				1A4444444444444444444444 /* SettingsView.swift */,
 				3B8FB534078C4B3FF0D11EB4 /* FaceClusterDiagnosticView.swift */,
 			);
 			path = Views;
@@ -455,7 +467,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					111A2F5F2D5A3881A8DF721F = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -512,12 +523,14 @@
 				64E5D6157C9F1A1CA9216666 /* ConversationTimelineView.swift in Sources */,
 				551B5012E5C3650D779E8355 /* DailyCardContainerView.swift in Sources */,
 				F5AEB29055C274654432FE84 /* DesignTokens.swift in Sources */,
+				F5A1B20155C274654432FE85 /* ScanProgressRing.swift in Sources */,
 				97ABCA83F7F6E98DF5A89EA1 /* FaceBubbleLayout.swift in Sources */,
 				57C68D723424E2B1AB8C989F /* FaceBubblesView.swift in Sources */,
 				F58BE65332B6D250AD34F183 /* FaceClusterDiagnosticView.swift in Sources */,
 				33AC07DD2BE2A3F199EBB221 /* FaceDetectionService.swift in Sources */,
 				77F783A858BED8023FCB1BED /* FaceEmbeddingService.swift in Sources */,
 				1C7659B18C71CE78B7B988DA /* FacePickerSheet.swift in Sources */,
+				1C7659B28C71CE78B7B988DB /* ShareCardSheet.swift in Sources */,
 				CD6294D54FC0A8DDBDD328D6 /* FaceScanSheet.swift in Sources */,
 				7C5E06CE9EA360BEA493F859 /* FaceTaggingBanner.swift in Sources */,
 				1B9BE1CBAAF5A716615D3A2F /* InviteFlowView.swift in Sources */,
@@ -525,6 +538,8 @@
 				B844D93F258048454BD7D4CD /* MemoryEditSheet.swift in Sources */,
 				B454BFD187A504D95A9E84D6 /* MemoryMetadataFields.swift in Sources */,
 				2CDC29FE5E1411F2E0B9B5ED /* MemoryTunnelApp.swift in Sources */,
+				1A1111111111111111111111 /* L10n.swift in Sources */,
+				1A3333333333333333333333 /* SettingsView.swift in Sources */,
 				0F32A041DE23A9BB4C232F3F /* MobileFaceNet.mlpackage in Sources */,
 				15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */,
 				76B7956F37FA5BB4D387C166 /* OnThisDayCard.swift in Sources */,
@@ -563,10 +578,11 @@
 		8A53A130897E3AE5CA586318 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				API_BASE_URL = "http://192.168.1.244:3000";
+				API_BASE_URL = "http://JY-Personal-Air.local:3000";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V95ARSBBXT;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MemoryTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -579,6 +595,7 @@
 		AB0DF6B68ABB2521D6243BE6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				API_BASE_URL = "https://memory-tunnel-api.fly.dev";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -606,6 +623,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = V95ARSBBXT;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MemoryTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

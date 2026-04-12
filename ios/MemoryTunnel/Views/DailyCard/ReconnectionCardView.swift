@@ -50,7 +50,7 @@ struct ReconnectionCardView: View {
                         .foregroundStyle(Color.white.opacity(0.8))
                 }
 
-                Text(candidate.name.isEmpty ? "Someone you miss" : candidate.name)
+                Text(candidate.name.isEmpty ? L.someoneWorthRemembering : candidate.name)
                     .font(.mtDisplay)
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -66,7 +66,7 @@ struct ReconnectionCardView: View {
                     Button {
                         showChapterCreation = true
                     } label: {
-                        Text("Start a chapter with \(candidate.name.isEmpty ? "them" : candidate.name)")
+                        Text(L.startAMemoryLane)
                             .font(.mtButton)
                             .foregroundStyle(Color.mtBackground)
                             .frame(maxWidth: .infinity)
@@ -79,7 +79,7 @@ struct ReconnectionCardView: View {
                     Button {
                         generateShareCard()
                     } label: {
-                        Text("Share as card")
+                        Text(L.share)
                             .font(.mtButton)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -112,12 +112,12 @@ struct ReconnectionCardView: View {
         let photos = candidate.photoCount
         if days > 365 {
             let years = days / 365
-            return "Last photo together was \(years) year\(years == 1 ? "" : "s") ago. You have \(photos) memories."
+            return L.yearsAgo(years)
         } else if days > 30 {
             let months = days / 30
-            return "Last photo together was \(months) month\(months == 1 ? "" : "s") ago."
+            return L.monthsAgo(months)
         } else {
-            return "You have \(photos) photos together."
+            return L.daysAgo(days)
         }
     }
 

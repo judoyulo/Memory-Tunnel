@@ -27,10 +27,37 @@ struct ChapterCreationView: View {
                     nameChapterScreen
                 case .addContent:
                     addContentScreen
+                case .batchReview(let chapterID):
+                    BatchPhotoReviewView(
+                        chapterID: chapterID,
+                        initialImages: vm.selectedPhotos.map { (image: $0.image, takenAt: $0.asset.creationDate) },
+                        embedded: true
+                    ) {
+                        // After batch upload completes, go to complete screen
+                        Task {
+                            let shareURL = await createInvitation(chapterID: chapterID)
+                            UserDefaults.standard.set(true, forKey: "smartStartCompleted")
+                            vm.step = .complete(chapterID: chapterID, shareURL: shareURL)
+                        }
+                    }
                 case .uploading:
                     uploadingScreen
                 case .complete(let chapterID, let shareURL):
                     completeScreen(chapterID: chapterID, shareURL: shareURL)
+                case .viewingChapter(let chapterID):
+                    ChapterDetailView(chapter: Chapter(id: chapterID, status: "active", name: vm.personName))
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button(L.back) {
+                                    // Return to face bubbles
+                                    if let onCreateAnother {
+                                        onCreateAnother()
+                                    } else {
+                                        onComplete(chapterID)
+                                    }
+                                }
+                            }
+                        }
                 }
             }
             .animation(.mtSlide, value: vm.step)
@@ -43,14 +70,14 @@ struct ChapterCreationView: View {
     private var selectPhotosScreen: some View {
         VStack(spacing: 0) {
             // Header
-            Text("Choose photos for this chapter")
+            Text(L.choosePhotos)
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
                 .padding(.top, Spacing.lg)
                 .padding(.bottom, Spacing.sm)
 
             if !vm.selectedPhotos.isEmpty {
-                Text("\(vm.selectedPhotos.count) selected")
+                Text(L.selected(vm.selectedPhotos.count))
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtSecondary)
                     .padding(.bottom, Spacing.sm)
@@ -96,7 +123,7 @@ struct ChapterCreationView: View {
             }
 
             // Continue button
-            PrimaryButton(title: "Continue", isLoading: false) {
+            PrimaryButton(title: L.continueBtn, isLoading: false) {
                 vm.proceedToName()
             }
             .disabled(vm.selectedPhotos.isEmpty)
@@ -104,11 +131,11 @@ struct ChapterCreationView: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.bottom, Spacing.lg)
         }
-        .navigationTitle(vm.suggestion != nil ? "Photos with \(vm.suggestion?.name ?? "this person")" : "Choose Photos")
+        .navigationTitle(vm.suggestion != nil ? L.photosWithName(vm.suggestion?.name ?? "") : L.choosePhotos)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Cancel") { onComplete(nil) }
+                Button(L.cancel) { onComplete(nil) }
                     .foregroundStyle(Color.mtSecondary)
             }
         }
@@ -130,18 +157,18 @@ struct ChapterCreationView: View {
                     .clipShape(Circle())
             }
 
-            Text("Name this chapter")
+            Text(L.nameThisMemoryLane)
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
 
             VStack(spacing: Spacing.md) {
-                TextField("Their name", text: $vm.personName)
+                TextField(L.theirName, text: $vm.personName)
                     .font(.mtBody)
                     .padding(Spacing.md)
                     .background(Color.mtSurface)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card))
 
-                TextField("Chapter name (optional)", text: $vm.chapterName)
+                TextField(L.chapterNameOptional, text: $vm.chapterName)
                     .font(.mtBody)
                     .padding(Spacing.md)
                     .background(Color.mtSurface)
@@ -151,7 +178,7 @@ struct ChapterCreationView: View {
 
             Spacer()
 
-            PrimaryButton(title: "Continue", isLoading: false) {
+            PrimaryButton(title: L.continueBtn, isLoading: false) {
                 vm.proceedToContent()
             }
             .disabled(vm.personName.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -161,13 +188,83 @@ struct ChapterCreationView: View {
         }
     }
 
-    // MARK: - Add Content
+    // MARK: - Add Content (single photo or chooser for multi)
 
     @ViewBuilder
     private var addContentScreen: some View {
+        if vm.selectedPhotos.count > 1 {
+            // Multiple photos: offer "add details to each" or "add directly"
+            multiPhotoChooser
+        } else {
+            singlePhotoContent
+        }
+    }
+
+    private var multiPhotoChooser: some View {
+        VStack(spacing: Spacing.lg) {
+            Spacer()
+
+            // Photo strip preview
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(Array(vm.selectedPhotos.enumerated()), id: \.offset) { _, photo in
+                        Image(uiImage: photo.image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 72, height: 72)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                }
+                .padding(.horizontal, Spacing.md)
+            }
+
+            Text(L.photosSelected(vm.selectedPhotos.count))
+                .font(.mtTitle)
+                .foregroundStyle(Color.mtLabel)
+
+            Spacer()
+
+            VStack(spacing: Spacing.sm) {
+                // Add details to each → open BatchPhotoReviewView after chapter creation
+                Button {
+                    vm.detailMode = .perPhoto
+                    vm.startUpload()
+                } label: {
+                    Label(L.addDetailsToEach, systemImage: "pencil")
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtBackground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.mtLabel)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                }
+
+                Button {
+                    vm.detailMode = .direct
+                    vm.startUpload()
+                } label: {
+                    Text(L.addAllDirectly)
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtLabel)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
+                        )
+                }
+            }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, Spacing.lg)
+        }
+        .navigationTitle(L.addDetails)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var singlePhotoContent: some View {
         ScrollView {
             VStack(spacing: Spacing.lg) {
-                // Photo preview
                 if let first = vm.selectedPhotos.first {
                     Image(uiImage: first.image)
                         .resizable()
@@ -178,8 +275,7 @@ struct ChapterCreationView: View {
                 }
 
                 VStack(alignment: .leading, spacing: Spacing.md) {
-                    // Caption
-                    TextField("Add a caption... (optional)", text: $vm.caption, axis: .vertical)
+                    TextField(L.captionOptional, text: $vm.caption, axis: .vertical)
                         .font(.mtBody)
                         .foregroundStyle(Color.mtLabel)
                         .lineLimit(3)
@@ -187,18 +283,16 @@ struct ChapterCreationView: View {
                         .background(Color.mtSurface)
                         .clipShape(RoundedRectangle(cornerRadius: Radius.card))
 
-                    // Location tag (auto-filled from EXIF)
                     HStack {
                         Image(systemName: "mappin")
                             .foregroundStyle(Color.mtSecondary)
-                        TextField("Location (optional)", text: $vm.locationName)
+                        TextField(L.addALocation, text: $vm.locationName)
                             .font(.mtBody)
                     }
                     .padding(Spacing.md)
                     .background(Color.mtSurface)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card))
 
-                    // Date tag (auto-filled from EXIF)
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundStyle(Color.mtSecondary)
@@ -207,7 +301,7 @@ struct ChapterCreationView: View {
                                 .font(.mtBody)
                                 .foregroundStyle(Color.mtLabel)
                         } else {
-                            Text("No date")
+                            Text(L.addADate)
                                 .font(.mtBody)
                                 .foregroundStyle(Color.mtTertiary)
                         }
@@ -225,15 +319,15 @@ struct ChapterCreationView: View {
                 }
                 .padding(.horizontal, Spacing.xl)
 
-                // Save button
-                PrimaryButton(title: "Save & Create Chapter", isLoading: vm.isLoading) {
+                PrimaryButton(title: L.createMemoryLane, isLoading: vm.isLoading) {
+                    vm.detailMode = .direct
                     vm.startUpload()
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.bottom, Spacing.lg)
             }
         }
-        .navigationTitle("Add details")
+        .navigationTitle(L.addDetails)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -244,7 +338,7 @@ struct ChapterCreationView: View {
         VStack(spacing: Spacing.md) {
             Spacer()
             ProgressView()
-            Text(vm.uploadProgress.isEmpty ? "Creating your chapter..." : vm.uploadProgress)
+            Text(vm.uploadProgress.isEmpty ? L.creatingYourMemoryLane : vm.uploadProgress)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
@@ -268,52 +362,71 @@ struct ChapterCreationView: View {
                     .foregroundStyle(Color.mtAccent)
             }
 
-            Text("Chapter created")
+            Text(L.chapterCreated())
                 .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
 
-            Text("Ready to invite \(vm.personName)?")
+            Text(L.readyToInvite(vm.personName))
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
 
             Spacer()
 
             VStack(spacing: Spacing.md) {
+                // View the memory lane inline, back button returns to bubbles
+                Button {
+                    vm.step = .viewingChapter(chapterID: chapterID)
+                } label: {
+                    Label(L.viewInMemoryLane, systemImage: "book.fill")
+                        .font(.mtButton)
+                        .foregroundStyle(Color.mtBackground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.mtLabel)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                }
+
                 if let url = shareURL {
                     ShareLink(item: url) {
-                        Text("Invite \(vm.personName)")
+                        Text(L.invite(vm.personName))
                             .font(.mtButton)
-                            .foregroundStyle(Color.mtBackground)
+                            .foregroundStyle(Color.mtLabel)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.mtLabel)
-                            .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Radius.button)
+                                    .stroke(Color.mtLabel, lineWidth: 1.5)
+                            )
                     }
                 }
 
                 if let onCreateAnother {
-                    Button("Create another chapter") {
+                    Button(L.createAnotherMemoryLane) {
                         onCreateAnother()
                     }
-                    .font(.mtButton)
-                    .foregroundStyle(Color.mtLabel)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.button)
-                            .stroke(Color.mtLabel, lineWidth: 1.5)
-                    )
+                    .font(.mtCaption)
+                    .foregroundStyle(Color.mtSecondary)
                 }
 
-                Button("Done") {
+                Button(L.done) {
                     onComplete(chapterID)
                 }
                 .font(.mtCaption)
-                .foregroundStyle(Color.mtSecondary)
+                .foregroundStyle(Color.mtTertiary)
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.bottom, Spacing.xxl)
         }
+    }
+
+    // MARK: - Helpers
+
+    private func createInvitation(chapterID: String) async -> URL? {
+        guard let firstMemory = try? await APIClient.shared.memories(chapterID: chapterID).first,
+              let invitation = try? await APIClient.shared.createInvitation(
+                  chapterID: chapterID, memoryID: firstMemory.id
+              ) else { return nil }
+        return invitation.shareURL
     }
 }
 
@@ -336,7 +449,7 @@ private struct ManualPhotoPickerSection: View {
                         Image(systemName: "photo.on.rectangle.angled")
                             .font(.system(size: 48))
                             .foregroundStyle(Color.mtTertiary)
-                        Text("Tap to choose photos")
+                        Text(L.tapToChoosePhotos)
                             .font(.mtBody)
                             .foregroundStyle(Color.mtSecondary)
                     }
@@ -367,7 +480,7 @@ private struct ManualPhotoPickerSection: View {
                     maxSelectionCount: 20,
                     matching: .images
                 ) {
-                    Text("Add more photos")
+                    Text(L.addMorePhotos)
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
                 }

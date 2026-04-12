@@ -92,12 +92,10 @@ struct DailyCardContainerView: View {
         ZStack {
             Color.mtBackground.ignoresSafeArea()
 
-            if !appState.hasChapters {
-                TodayWarmOnrampView()
-            } else if vm.isLoading && !vm.hasLoaded {
+            if vm.isLoading && !vm.hasLoaded && feedVM.cards.isEmpty {
                 ProgressView()
             } else {
-                // Full-screen swipeable feed
+                // Full-screen swipeable feed — works with or without chapters
                 TodayFeedView(
                     feedVM: feedVM,
                     isScanning: feedVM.isScanning
@@ -122,22 +120,28 @@ extension Notification.Name {
 
 struct TodayFeedView: View {
     @ObservedObject var feedVM: TodayFeedViewModel
+    @ObservedObject var scanProgress = TodayFeedService.scanProgress
     let isScanning: Bool
+    @AppStorage("todayHintDismissed") private var hintDismissed = false
 
     var body: some View {
         TabView {
+            // Hint card (first card, shown once for new users)
+            if !hintDismissed && !feedVM.cards.isEmpty {
+                TodayHintCard { hintDismissed = true }
+            }
+
             ForEach(feedVM.cards) { card in
-                FeedCardFullScreen(card: card, feedVM: feedVM)
+                FeedCardFullScreen(cardID: card.id, feedVM: feedVM)
             }
 
             // Scanning indicator at the end
             if isScanning {
-                VStack(spacing: Spacing.md) {
-                    ProgressView()
-                    Text("Finding people in your photos...")
-                        .font(.mtBody)
-                        .foregroundStyle(Color.mtSecondary)
-                }
+                ScanProgressRing(
+                    scanned: scanProgress.scanned,
+                    total: scanProgress.total,
+                    facesFound: feedVM.cards.count
+                )
             }
 
             // End card
@@ -146,10 +150,10 @@ struct TodayFeedView: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 40))
                         .foregroundStyle(Color.mtAccent)
-                    Text("That's all for today")
+                    Text(L.thatsAllForToday)
                         .font(.mtTitle)
                         .foregroundStyle(Color.mtLabel)
-                    Text("Come back tomorrow for new memories")
+                    Text(L.comeBackTomorrow)
                         .font(.mtBody)
                         .foregroundStyle(Color.mtSecondary)
                 }
@@ -157,6 +161,96 @@ struct TodayFeedView: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .ignoresSafeArea()
+    }
+}
+
+// MARK: - Today Hint Card (shown once as first card in feed)
+
+private struct TodayHintCard: View {
+    let onDismiss: () -> Void
+    @State private var ringTrim: CGFloat = 0
+    @State private var ringOpacity: Double = 0
+    @State private var textOpacity: Double = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                Color.mtBackground
+
+                VStack(spacing: Spacing.xl) {
+                    Spacer()
+
+                    // Tunnel icon (draws on, matching splash animation)
+                    ZStack {
+                        Circle()
+                            .trim(from: 0, to: ringTrim)
+                            .stroke(Color.mtLabel, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                            .frame(width: 56, height: 56)
+                            .rotationEffect(.degrees(-90))
+                            .opacity(ringOpacity)
+
+                        Circle()
+                            .fill(Color.mtAccent)
+                            .frame(width: 14, height: 14)
+                            .opacity(ringOpacity)
+                    }
+                    .frame(width: 70, height: 70)
+
+                    VStack(spacing: Spacing.md) {
+                        Text(L.hintTitle)
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(Color.mtLabel)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .opacity(textOpacity)
+
+                        VStack(spacing: Spacing.sm) {
+                            hintRow(icon: "hand.draw", text: L.hintSwipe)
+                            hintRow(icon: "book.fill", text: L.hintTap)
+                            hintRow(icon: "square.and.arrow.up", text: L.hintShare)
+                        }
+                        .opacity(textOpacity)
+                    }
+
+                    Spacer()
+
+                    Button(action: onDismiss) {
+                        Text(L.gotIt)
+                            .font(.mtButton)
+                            .foregroundStyle(Color.mtLabel)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Radius.button)
+                                    .stroke(Color.mtLabel, lineWidth: 1.5)
+                            )
+                    }
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.bottom, 100)
+                    .opacity(textOpacity)
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .onAppear {
+            // Ring draws on
+            withAnimation(.easeOut(duration: 0.15)) { ringOpacity = 1 }
+            withAnimation(.easeOut(duration: 0.5)) { ringTrim = 1.0 }
+            // Text fades in after ring
+            withAnimation(.easeOut(duration: 0.3).delay(0.4)) { textOpacity = 1 }
+        }
+    }
+
+    private func hintRow(icon: String, text: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundStyle(Color.mtSecondary)
+                .frame(width: 24)
+            Text(text)
+                .font(.system(size: 15))
+                .foregroundStyle(Color.mtSecondary)
+        }
     }
 }
 
@@ -198,7 +292,7 @@ private struct DailyCardFullScreen: View {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Spacer()
 
-                    Text("TODAY'S MEMORY")
+                    Text(L.todaysMemory)
                         .font(.system(size: 11, weight: .heavy))
                         .tracking(1.5)
                         .foregroundStyle(.white)
@@ -225,7 +319,7 @@ private struct DailyCardFullScreen: View {
                     // Two buttons: Send + Find more photos
                     VStack(spacing: Spacing.sm) {
                         Button { showSendFlow = true } label: {
-                            Text("Send a memory")
+                            Text(L.sendAMemory)
                                 .font(.mtButton)
                                 .foregroundStyle(Color.mtBackground)
                                 .frame(maxWidth: .infinity)
@@ -235,7 +329,7 @@ private struct DailyCardFullScreen: View {
                         }
 
                         Button { showFacePicker = true } label: {
-                            Label("Find more photos of this person", systemImage: "sparkle.magnifyingglass")
+                            Label(L.findMorePhotos, systemImage: "sparkle.magnifyingglass")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
@@ -276,9 +370,9 @@ private struct DailyCardFullScreen: View {
 
     private var triggerLabel: String {
         switch card.triggerType {
-        case "welcome":  return "First memory"
-        case "birthday": return "Birthday today"
-        case "decay":    return "It's been a while"
+        case "welcome":  return L.firstMemory
+        case "birthday": return L.birthdayToday
+        case "decay":    return L.itsBeenAWhile
         default:         return ""
         }
     }
@@ -313,15 +407,23 @@ private struct DailyCardFullScreen: View {
 // MARK: - Feed Card (Full-Screen Slide)
 
 private struct FeedCardFullScreen: View {
-    let card: FeedCard
+    let cardID: UUID
     @ObservedObject var feedVM: TodayFeedViewModel
     @State private var photo: UIImage?
     @State private var showFacePicker = false
+    @State private var currentExcludedIDs: Set<String> = []
+    @State private var currentKnownChapterID: String? = nil
+    @State private var currentKnownChapterName: String? = nil
     @State private var showSendFlow = false
+    @State private var showShareSheet = false
     @State private var detectedFaces: [(crop: UIImage, embedding: [Float])] = []
     @State private var facesReady = false
     @State private var showChapterPicker = false
-    @State private var addedChapters: [(chapterID: String, partnerName: String)] = []
+
+    /// Live card from feedVM (always fresh after markCardAdded)
+    private var card: FeedCard {
+        feedVM.cards.first(where: { $0.id == cardID }) ?? feedVM.cards[0]
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -343,6 +445,26 @@ private struct FeedCardFullScreen: View {
                     endPoint: .bottom
                 )
 
+                // Share icon (top-right corner)
+                if photo != nil {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button { showShareSheet = true } label: {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 40, height: 40)
+                                    .background(.ultraThinMaterial.opacity(0.6))
+                                    .clipShape(Circle())
+                            }
+                            .padding(.trailing, Spacing.md)
+                            .padding(.top, 60)
+                        }
+                        Spacer()
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Spacer()
 
@@ -357,8 +479,6 @@ private struct FeedCardFullScreen: View {
 
                     if let name = card.matchedPartnerName {
                         Text(name).font(.mtDisplay).foregroundStyle(.white).lineLimit(1)
-                    } else {
-                        Text("Someone worth remembering").font(.mtTitle).foregroundStyle(.white)
                     }
 
                     Text(contextLine)
@@ -371,7 +491,7 @@ private struct FeedCardFullScreen: View {
                             Button {
                                 showChapterPicker = true
                             } label: {
-                                Label("View in chapter", systemImage: "book.fill")
+                                Label(L.viewInMemoryLane, systemImage: "book.fill")
                                     .font(.mtButton)
                                     .foregroundStyle(Color.mtBackground)
                                     .frame(maxWidth: .infinity)
@@ -381,9 +501,9 @@ private struct FeedCardFullScreen: View {
                             }
 
                             Button {
-                                showFacePicker = true
+                                currentExcludedIDs = Set(card.allChapterMatches.map(\.chapterID)); currentKnownChapterID = card.matchedChapterID; currentKnownChapterName = card.matchedPartnerName; showFacePicker = true
                             } label: {
-                                Text("Add to more chapters")
+                                Text(L.addToMoreMemoryLanes)
                                     .font(.mtButton)
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity)
@@ -397,9 +517,9 @@ private struct FeedCardFullScreen: View {
                         .padding(.top, Spacing.xs)
                     } else {
                         Button {
-                            showFacePicker = true
+                            currentExcludedIDs = Set(card.allChapterMatches.map(\.chapterID)); currentKnownChapterID = card.matchedChapterID; currentKnownChapterName = card.matchedPartnerName; showFacePicker = true
                         } label: {
-                            Text(card.type == .newFace ? "Start a chapter" : "Add to chapter")
+                            Text(card.type == .newFace ? L.startAMemoryLane : L.addToMemoryLane)
                                 .font(.mtButton)
                                 .foregroundStyle(Color.mtBackground)
                                 .frame(maxWidth: .infinity)
@@ -420,11 +540,14 @@ private struct FeedCardFullScreen: View {
                 photo: photo,
                 asset: card.asset,
                 faces: detectedFaces,
-                knownChapterID: card.matchedChapterID,
-                knownChapterName: card.matchedPartnerName,
-                excludeChapterIDs: Set(card.allChapterMatches.map(\.chapterID)),
+                knownChapterID: currentKnownChapterID,
+                knownChapterName: currentKnownChapterName,
+                excludeChapterIDs: currentExcludedIDs,
                 onActed: { chapterID, chapterName in
-                    feedVM.markCardAdded(cardID: card.id, chapterID: chapterID, chapterName: chapterName)
+                    feedVM.markCardAdded(cardID: cardID, chapterID: chapterID, chapterName: chapterName)
+                    currentExcludedIDs.insert(chapterID)
+                    currentKnownChapterID = chapterID
+                    currentKnownChapterName = chapterName
                 }
             )
         }
@@ -435,6 +558,19 @@ private struct FeedCardFullScreen: View {
         }
         .sheet(isPresented: $showChapterPicker) {
             ChapterPickerSheet(chapters: uniqueChapterMatches)
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let photo {
+                ShareCardSheet(
+                    photo: photo,
+                    creationDate: card.asset.creationDate,
+                    locationName: nil,
+                    photoDepth: card.photoDepth,
+                    asset: card.asset
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.hidden)
+            }
         }
     }
 
@@ -881,7 +1017,7 @@ struct TodayWarmOnrampView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(Color.mtAccent)
 
-            Text("Your daily memories start\nwhen you share your first photo.")
+            Text(L.warmOnrampTitle)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -890,7 +1026,7 @@ struct TodayWarmOnrampView: View {
             Button {
                 showInviteFlow = true
             } label: {
-                Text("Start a chapter")
+                Text(L.startAMemoryLane)
                     .font(.mtButton)
                     .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
@@ -964,7 +1100,7 @@ struct ChapterPreviewCard: View {
             Spacer()
 
             Button(action: onSend) {
-                Text("Send")
+                Text(L.send)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.mtBackground)
                     .padding(.horizontal, 16).padding(.vertical, 8)

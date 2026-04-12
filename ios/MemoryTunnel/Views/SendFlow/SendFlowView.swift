@@ -165,7 +165,7 @@ struct SendFlowView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     if case .sent = vm.step { EmptyView() }
                     else {
-                        Button("Cancel") { dismiss() }
+                        Button(L.cancel) { dismiss() }
                             .foregroundStyle(Color.mtSecondary)
                     }
                 }
@@ -184,12 +184,12 @@ struct PhotoPickerStep: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
-            Text("Choose a photo")
+            Text(L.chooseAPhoto)
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
 
             PhotosPicker(selection: $vm.selectedItem, matching: .images) {
-                Label("Open Photos", systemImage: "photo.on.rectangle")
+                Label(L.openPhotos, systemImage: "photo.on.rectangle")
                     .font(.mtButton)
                     .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
@@ -216,7 +216,7 @@ struct PhotoPickerStep: View {
                     showSuggestedPhotos = true
                 }
             } label: {
-                Label("Find more photos of this person", systemImage: "sparkle.magnifyingglass")
+                Label(L.findMorePhotos, systemImage: "sparkle.magnifyingglass")
                     .font(.mtButton)
                     .foregroundStyle(Color.mtLabel)
                     .frame(maxWidth: .infinity)
@@ -228,7 +228,7 @@ struct PhotoPickerStep: View {
             }
             .padding(.horizontal, Spacing.xl)
 
-            Text("Scans your photo library for photos\nwith the same person")
+            Text(L.scanForSamePerson)
                 .font(.mtCaption)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -310,7 +310,7 @@ struct CaptionStep: View {
 
             // Caption input + metadata
             VStack(alignment: .leading, spacing: Spacing.md) {
-                TextField("Add a caption… (optional)", text: $vm.caption, axis: .vertical)
+                TextField(L.captionOptional, text: $vm.caption, axis: .vertical)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtLabel)
                     .focused($captionFocused)
@@ -328,13 +328,13 @@ struct CaptionStep: View {
 
                 // Visibility toggle
                 HStack {
-                    Text("Visible to")
+                    Text(L.visibleTo)
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
                     Spacer()
-                    Picker("Visibility", selection: $vm.visibility) {
-                        Text("This memory only").tag("this_item")
-                        Text("All my memories").tag("all")
+                    Picker(L.visibility, selection: $vm.visibility) {
+                        Text(L.thisMemoryOnly).tag("this_item")
+                        Text(L.allMyMemories).tag("all")
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 220)
@@ -344,7 +344,7 @@ struct CaptionStep: View {
                     captionFocused = false
                     Task { await vm.send() }
                 } label: {
-                    Text("Send")
+                    Text(L.send)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity)
@@ -391,7 +391,7 @@ struct SendingStep: View {
         VStack(spacing: Spacing.lg) {
             Spacer()
             ProgressView()
-            Text("Sending…")
+            Text(L.sending)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()
@@ -420,11 +420,11 @@ struct SentStep: View {
                     .foregroundStyle(Color.mtAccent)
             }
 
-            Text("Sent")
+            Text(L.sent)
                 .font(.mtDisplay)
                 .foregroundStyle(Color.mtLabel)
 
-            Text("Tap the link below to invite them\nif they're not on Memory Tunnel yet.")
+            Text(L.inviteViaTap)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -434,7 +434,7 @@ struct SentStep: View {
                 Button {
                     showShareSheet = true
                 } label: {
-                    Label("Share invite link", systemImage: "square.and.arrow.up")
+                    Label(L.shareInviteLink, systemImage: "square.and.arrow.up")
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
@@ -449,7 +449,7 @@ struct SentStep: View {
                 }
             }
 
-            Button("Done") { dismiss() }
+            Button(L.done) { dismiss() }
                 .font(.mtLabel)
                 .foregroundStyle(Color.mtSecondary)
 
@@ -468,14 +468,14 @@ struct ErrorStep: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Spacer()
-            Text("Something went wrong")
+            Text(L.somethingWentWrong)
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
             Text(message)
                 .font(.mtCaption)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
-            Button("Try again", action: retry)
+            Button(L.tryAgain, action: retry)
                 .font(.mtLabel)
                 .foregroundStyle(Color.mtSecondary)
             Spacer()

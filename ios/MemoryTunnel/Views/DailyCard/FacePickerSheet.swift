@@ -40,6 +40,7 @@ struct FacePickerSheet: View {
     @State private var isWorking = false
 
     // Persisted across steps (won't get lost when step changes)
+    @State private var overrideNoMatch = false
     @State private var savedEmbedding: [Float]?
     @State private var savedCrop: UIImage?
     @State private var resultChapterID = ""
@@ -63,11 +64,17 @@ struct FacePickerSheet: View {
     }
 
     private var matchedChapter: (chapterID: String, partnerName: String)? {
-        // If a face is selected, use its match (or nil if no match for that face)
+        // User tapped "Face not correctly recognized?" — clear all auto-matches
+        if overrideNoMatch { return nil }
+        // If a face is selected, use its match
         if let idx = selectedIndex {
-            return faceChapterMatches[idx] // nil if this specific face has no chapter
+            return faceChapterMatches[idx]
         }
-        // No face selected yet — use known chapter from feed card
+        // Single face — use its embedding match if available
+        if faces.count == 1, let match = faceChapterMatches[0] {
+            return match
+        }
+        // Fallback — use known chapter from feed card
         if let id = knownChapterID, let name = knownChapterName { return (id, name) }
         return nil
     }
@@ -79,7 +86,7 @@ struct FacePickerSheet: View {
 
                 switch step {
                 case .detecting:
-                    VStack { Spacer(); ProgressView(); Text("Detecting faces...").font(.mtCaption).foregroundStyle(Color.mtSecondary); Spacer() }
+                    VStack { Spacer(); ProgressView(); Text(L.detectingFaces).font(.mtCaption).foregroundStyle(Color.mtSecondary); Spacer() }
 
                 case .picking:
                     pickingView
@@ -99,7 +106,7 @@ struct FacePickerSheet: View {
                     }
 
                 case .adding:
-                    VStack { Spacer(); ProgressView(); Text("Adding photo...").font(.mtCaption).foregroundStyle(Color.mtSecondary); Spacer() }
+                    VStack { Spacer(); ProgressView(); Text(L.addingPhoto).font(.mtCaption).foregroundStyle(Color.mtSecondary); Spacer() }
 
                 case .navigating:
                     EmptyView()
@@ -136,11 +143,11 @@ struct FacePickerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if case .picking = step {
-                        Button("Cancel") { dismiss() }
+                        Button(L.cancel) { dismiss() }
                     } else if case .naming = step {
-                        Button("Cancel") { dismiss() }
+                        Button(L.cancel) { dismiss() }
                     } else if case .detecting = step {
-                        Button("Cancel") { dismiss() }
+                        Button(L.cancel) { dismiss() }
                     }
                 }
             }
@@ -153,7 +160,7 @@ struct FacePickerSheet: View {
     private var pickingView: some View {
         VStack(spacing: Spacing.lg) {
             if faces.count > 1 {
-                Text("Who is this?")
+                Text(L.whoIsThis)
                     .font(.mtTitle)
                     .foregroundStyle(Color.mtLabel)
                     .padding(.top, Spacing.lg)
@@ -203,7 +210,10 @@ struct FacePickerSheet: View {
 
             // Action buttons
             VStack(spacing: Spacing.sm) {
-                if let match = matchedChapter, !excludeChapterIDs.contains(match.chapterID) {
+                if overrideNoMatch {
+                    // Show all existing lanes to pick from
+                    chapterPickerList
+                } else if let match = matchedChapter, !excludeChapterIDs.contains(match.chapterID) {
                     Button {
                         savedEmbedding = selectedFace?.embedding ?? faces.first?.embedding
                         savedCrop = selectedFace?.crop ?? faces.first?.crop
@@ -211,15 +221,14 @@ struct FacePickerSheet: View {
                         resultChapterName = match.partnerName
                         Task { await addToChapter(match.chapterID, name: match.partnerName) }
                     } label: {
-                        Text("Add to \(match.partnerName)'s chapter")
+                        Text(L.addToNameMemoryLane(match.partnerName))
                             .font(.mtButton).foregroundStyle(Color.mtBackground)
                             .frame(maxWidth: .infinity).padding(.vertical, 14)
                             .background(Color.mtLabel)
                             .clipShape(RoundedRectangle(cornerRadius: Radius.button))
                     }
                 } else if let match = matchedChapter, excludeChapterIDs.contains(match.chapterID) {
-                    // Already added to this chapter
-                    Text("Already in \(match.partnerName)'s chapter")
+                    Text(L.alreadyInNameMemoryLane(match.partnerName))
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtAccent)
                         .padding(.vertical, 8)
@@ -229,7 +238,7 @@ struct FacePickerSheet: View {
                         savedCrop = selectedFace?.crop ?? faces.first?.crop
                         step = .naming
                     } label: {
-                        Text("Start a chapter")
+                        Text(L.startAMemoryLane)
                             .font(.mtButton).foregroundStyle(Color.mtBackground)
                             .frame(maxWidth: .infinity).padding(.vertical, 14)
                             .background(selectedIndex != nil || faces.count <= 1 ? Color.mtLabel : Color.mtTertiary)
@@ -238,10 +247,93 @@ struct FacePickerSheet: View {
                     .disabled(faces.count > 1 && selectedIndex == nil)
                 }
 
-                // "Find more photos" moved to BatchPhotoReviewView
+                // "Face not correctly recognized?" link
+                if !overrideNoMatch {
+                    Button {
+                        withAnimation(.mtSpring) { overrideNoMatch = true }
+                    } label: {
+                        Text(L.faceNotRecognized)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.mtTertiary)
+                    }
+                    .padding(.top, Spacing.xs)
+                }
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.bottom, Spacing.lg)
+        }
+    }
+
+    // MARK: - Chapter Picker (for "Face not correctly recognized?")
+
+    @ViewBuilder
+    private var chapterPickerList: some View {
+        VStack(spacing: Spacing.sm) {
+            Text(L.chooseMemoryLane)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.mtSecondary)
+
+            ScrollView {
+                VStack(spacing: 6) {
+                    ForEach(appState.chapters, id: \.id) { chapter in
+                        let name = chapter.partner?.displayName ?? chapter.name ?? "?"
+                        Button {
+                            savedEmbedding = selectedFace?.embedding ?? faces.first?.embedding
+                            savedCrop = selectedFace?.crop ?? faces.first?.crop
+                            resultChapterID = chapter.id
+                            resultChapterName = name
+                            // Link face to correct chapter
+                            if let emb = savedEmbedding {
+                                let partnerID = chapter.partner?.id ?? chapter.id
+                                Task {
+                                    await FaceEmbeddingService.shared.linkFaceToChapter(
+                                        embedding: emb, crop: savedCrop,
+                                        partnerID: partnerID, chapterID: chapter.id
+                                    )
+                                }
+                            }
+                            Task { await addToChapter(chapter.id, name: name) }
+                        } label: {
+                            HStack {
+                                Text(name)
+                                    .font(.mtLabel)
+                                    .foregroundStyle(Color.mtLabel)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.mtTertiary)
+                            }
+                            .padding(Spacing.md)
+                            .background(Color.mtSurface)
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Start new memory lane
+                    Button {
+                        savedEmbedding = selectedFace?.embedding ?? faces.first?.embedding
+                        savedCrop = selectedFace?.crop ?? faces.first?.crop
+                        step = .naming
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(L.startAMemoryLane)
+                                .font(.mtLabel)
+                        }
+                        .foregroundStyle(Color.mtLabel)
+                        .frame(maxWidth: .infinity)
+                        .padding(Spacing.md)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.button)
+                                .stroke(Color.mtLabel, lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxHeight: 200)
         }
     }
 
@@ -258,11 +350,11 @@ struct FacePickerSheet: View {
                     .clipShape(Circle())
             }
 
-            Text("Name this chapter")
+            Text(L.nameThisMemoryLane)
                 .font(.mtTitle)
                 .foregroundStyle(Color.mtLabel)
 
-            TextField("Their name", text: $chapterNameInput)
+            TextField(L.theirName, text: $chapterNameInput)
                 .font(.mtBody)
                 .padding(12)
                 .background(Color.mtSurface)
@@ -274,7 +366,7 @@ struct FacePickerSheet: View {
             Button {
                 Task { await createChapter() }
             } label: {
-                Text(isWorking ? "Creating..." : "Create chapter")
+                Text(isWorking ? L.creating : L.createMemoryLane)
                     .font(.mtButton).foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity).padding(.vertical, 14)
                     .background(!chapterNameInput.isEmpty ? Color.mtLabel : Color.mtTertiary)
@@ -307,11 +399,14 @@ struct FacePickerSheet: View {
             Spacer()
 
             VStack(spacing: Spacing.sm) {
-                // Done — dismiss back to card (card now shows "View in chapter" button)
+                // View in memory lane — navigate to the chapter
                 Button {
                     dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        NotificationRouter.shared.pendingChapterID = chapterID
+                    }
                 } label: {
-                    Label("Done", systemImage: "checkmark")
+                    Label(L.viewInMemoryLane, systemImage: "book.fill")
                         .font(.mtButton).foregroundStyle(Color.mtBackground)
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
                         .background(Color.mtLabel)
@@ -321,14 +416,14 @@ struct FacePickerSheet: View {
                 Button {
                     step = .scanning
                 } label: {
-                    Label("Find more photos by scanning", systemImage: "sparkle.magnifyingglass")
+                    Label(L.findMoreByScanning, systemImage: "sparkle.magnifyingglass")
                         .font(.mtButton).foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity).padding(.vertical, 14)
                         .overlay(RoundedRectangle(cornerRadius: Radius.button).stroke(Color.mtLabel, lineWidth: 1.5))
                 }
 
                 Button { dismiss() } label: {
-                    Text("Back to cards")
+                    Text(L.backToCards)
                         .font(.mtButton).foregroundStyle(Color.mtSecondary)
                         .padding(.vertical, 10)
                 }
@@ -387,6 +482,7 @@ struct FacePickerSheet: View {
 
         do {
             let chapter = try await APIClient.shared.createChapter(name: chapterNameInput)
+            appState.chapterCreated(chapter)
             let partnerID = chapter.partner?.id ?? chapter.id
 
             if let emb = savedEmbedding {
@@ -413,7 +509,7 @@ struct FacePickerSheet: View {
 
             if batch.isEmpty {
                 onActed?(chapter.id, chapterNameInput)
-                step = .done(message: "Chapter Created", chapterID: chapter.id, chapterName: chapterNameInput)
+                step = .done(message: L.chapterCreated(), chapterID: chapter.id, chapterName: chapterNameInput)
             } else {
                 batchImages = batch
                 step = .batchReview

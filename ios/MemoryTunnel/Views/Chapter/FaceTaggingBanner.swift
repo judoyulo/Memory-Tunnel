@@ -43,10 +43,10 @@ struct FaceTaggingBanner: View {
 
                 // Question
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Who's in this photo?")
+                    Text(L.whosInThisPhoto)
                         .font(.mtLabel)
                         .foregroundStyle(Color.mtLabel)
-                    Text("Helps Memory Tunnel remember them next time.")
+                    Text(L.helpsMTRemember)
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
                 }
@@ -59,7 +59,7 @@ struct FaceTaggingBanner: View {
             HStack(spacing: Spacing.sm) {
                 // Ghost: Skip
                 Button(action: onSkip) {
-                    Text("Skip")
+                    Text(L.skip)
                         .font(.mtButton)
                         .foregroundStyle(Color.mtLabel)
                         .frame(maxWidth: .infinity)
@@ -81,7 +81,7 @@ struct FaceTaggingBanner: View {
                     }
                 } label: {
                     ZStack {
-                        Text("Yes, that's \(partnerName)")
+                        Text(L.yesThat(partnerName))
                             .font(.mtButton)
                             .foregroundStyle(Color.mtBackground)
                             .opacity(isConfirming ? 0 : 1)

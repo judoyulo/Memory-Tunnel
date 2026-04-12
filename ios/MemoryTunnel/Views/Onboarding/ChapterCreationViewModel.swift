@@ -10,8 +10,10 @@ final class ChapterCreationViewModel: ObservableObject {
         case selectPhotos
         case nameChapter
         case addContent
+        case batchReview(chapterID: String)
         case uploading
         case complete(chapterID: String, shareURL: URL?)
+        case viewingChapter(chapterID: String)
 
         static func == (lhs: Step, rhs: Step) -> Bool {
             switch (lhs, rhs) {
@@ -19,13 +21,18 @@ final class ChapterCreationViewModel: ObservableObject {
                  (.nameChapter, .nameChapter),
                  (.addContent, .addContent),
                  (.uploading, .uploading): return true
+            case (.batchReview(let a), .batchReview(let b)): return a == b
             case (.complete(let a, _), .complete(let b, _)): return a == b
+            case (.viewingChapter(let a), .viewingChapter(let b)): return a == b
             default: return false
             }
         }
     }
 
+    enum DetailMode { case direct, perPhoto }
+
     @Published var step: Step = .selectPhotos
+    @Published var detailMode: DetailMode = .direct
     @Published var selectedPhotos: [(asset: PHAsset, image: UIImage)] = []
     @Published var personName: String = ""
     @Published var chapterName: String = ""
@@ -90,6 +97,23 @@ final class ChapterCreationViewModel: ObservableObject {
         Task { await upload() }
     }
 
+    // MARK: - Reverse Geocode
+
+    private func reverseGeocode(_ location: CLLocation) async -> String? {
+        await withCheckedContinuation { continuation in
+            CLGeocoder().reverseGeocodeLocation(location) { placemarks, _ in
+                guard let place = placemarks?.first else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                var parts: [String] = []
+                if let city = place.locality { parts.append(city) }
+                if let country = place.country { parts.append(country) }
+                continuation.resume(returning: parts.isEmpty ? nil : parts.joined(separator: ", "))
+            }
+        }
+    }
+
     // MARK: - EXIF Extraction
 
     private func extractEXIF(from asset: PHAsset) {
@@ -136,6 +160,13 @@ final class ChapterCreationViewModel: ObservableObject {
 
             guard let chapterID = createdChapterID else { return }
 
+            // If perPhoto mode, hand off to BatchPhotoReviewView
+            if detailMode == .perPhoto {
+                isLoading = false
+                step = .batchReview(chapterID: chapterID)
+                return
+            }
+
             // 2. Upload each photo sequentially (skip already-uploaded on retry)
             var shareURL: URL?
             let total = selectedPhotos.count
@@ -144,9 +175,23 @@ final class ChapterCreationViewModel: ObservableObject {
 
                 let remaining = total - uploadedPhotoIndices.count
                 let current = total - remaining + 1
-                uploadProgress = "Uploading \(current) of \(total)..."
+                uploadProgress = L.uploading(current, total)
 
                 guard let data = photo.image.jpegData(compressionQuality: 0.85) else { continue }
+
+                // Per-photo EXIF: use the photo's own asset location/date if available
+                let photoDate = photo.asset.creationDate ?? takenAt
+                var photoLat = latitude
+                var photoLng = longitude
+                var photoLoc = locationName.isEmpty ? nil : locationName
+                if let loc = photo.asset.location {
+                    photoLat = loc.coordinate.latitude
+                    photoLng = loc.coordinate.longitude
+                    // Reverse geocode synchronously from cache if available
+                    if photoLoc == nil || i > 0 {
+                        photoLoc = await reverseGeocode(loc)
+                    }
+                }
 
                 let presign = try await APIClient.shared.presign(chapterID: chapterID)
                 try await APIClient.shared.uploadToS3(data: data, presign: presign)
@@ -154,11 +199,11 @@ final class ChapterCreationViewModel: ObservableObject {
                     chapterID: chapterID,
                     s3Key: presign.s3Key,
                     caption: uploadedPhotoIndices.isEmpty ? (caption.isEmpty ? nil : caption) : nil,
-                    takenAt: takenAt,
+                    takenAt: photoDate,
                     visibility: "this_item",
-                    locationName: locationName.isEmpty ? nil : locationName,
-                    latitude: latitude,
-                    longitude: longitude
+                    locationName: photoLoc,
+                    latitude: photoLat,
+                    longitude: photoLng
                 )
                 uploadedPhotoIndices.insert(i)
             }

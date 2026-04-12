@@ -6,6 +6,7 @@ import Photos
 @MainActor
 final class OnboardingViewModel: ObservableObject {
     enum Step: Equatable {
+        case language
         case welcome
         case phone
         case devCode          // developer bypass
@@ -18,7 +19,7 @@ final class OnboardingViewModel: ObservableObject {
 
         static func == (lhs: Step, rhs: Step) -> Bool {
             switch (lhs, rhs) {
-            case (.welcome, .welcome), (.phone, .phone), (.devCode, .devCode),
+            case (.language, .language), (.welcome, .welcome), (.phone, .phone), (.devCode, .devCode),
                  (.code, .code), (.name, .name), (.photoPermission, .photoPermission),
                  (.faceBubbles, .faceBubbles), (.done, .done): return true
             case (.chapterCreation, .chapterCreation): return true
@@ -27,7 +28,7 @@ final class OnboardingViewModel: ObservableObject {
         }
     }
 
-    @Published var step: Step = .welcome
+    @Published var step: Step = .language
     @Published var phone: String = ""
     @Published var code: String = ""
     @Published var devCode: String = ""
@@ -114,22 +115,25 @@ final class OnboardingViewModel: ObservableObject {
 
     // MARK: - Photo Permission + Scanning
 
+    private var scanTask: Task<Void, Never>?
+
     func requestPhotosAndScan() {
         isScanning = true
         step = .faceBubbles
 
-        Task {
+        scanTask = Task {
             let stream = await PhotoLibraryScanner.shared.scanFacesProgressively()
             for await snapshot in stream {
+                if Task.isCancelled { return }
                 faceSuggestions = snapshot
             }
             isScanning = false
-
-            // If no faces found, offer manual creation
-            if faceSuggestions.isEmpty {
-                // Stay on faceBubbles — the view shows "Choose photos manually" option
-            }
         }
+    }
+
+    func stopScan() {
+        scanTask?.cancel()
+        isScanning = false
     }
 
     func skipPhotos() {
@@ -141,6 +145,7 @@ final class OnboardingViewModel: ObservableObject {
 
     func selectFace(at index: Int) {
         guard index < faceSuggestions.count else { return }
+        stopScan() // Stop scanning so new snapshots don't cause view re-creation
         step = .chapterCreation(faceSuggestions[index])
     }
 
@@ -181,6 +186,9 @@ struct OnboardingView: View {
 
             Group {
                 switch vm.step {
+                case .language:
+                    LanguagePickerOnboarding { vm.step = .welcome }
+
                 case .welcome:
                     WelcomeView { vm.step = .phone }
 
@@ -250,10 +258,10 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: Spacing.sm) {
-                Text("Memory Tunnel")
+                Text(L.appName)
                     .font(.mtDisplay)
                     .foregroundStyle(Color.mtLabel)
-                Text("For the people who matter most.")
+                Text(L.appTagline)
                     .font(.mtBody)
                     .foregroundStyle(Color.mtSecondary)
             }
@@ -275,7 +283,7 @@ struct PhoneStep: View {
 
     var body: some View {
         VStack(spacing: Spacing.md) {
-            TextField("+1 (555) 555-5555", text: $vm.phone)
+            TextField(L.phonePlaceholder, text: $vm.phone)
                 .keyboardType(.phonePad)
                 .font(.mtBody)
                 .padding(Spacing.md)
@@ -288,7 +296,7 @@ struct PhoneStep: View {
                 Text(err).font(.mtCaption).foregroundStyle(Color.mtError)
             }
 
-            PrimaryButton(title: "Continue", isLoading: vm.isLoading) {
+            PrimaryButton(title: L.continueBtn, isLoading: vm.isLoading) {
                 Task { await vm.sendOTP() }
             }
 
@@ -348,7 +356,7 @@ struct CodeStep: View {
 
     var body: some View {
         VStack(spacing: Spacing.md) {
-            Text("Enter the 6-digit code\nsent to your phone.")
+            Text(L.enterOTPPrompt)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -367,11 +375,11 @@ struct CodeStep: View {
                 Text(err).font(.mtCaption).foregroundStyle(Color.mtError)
             }
 
-            PrimaryButton(title: "Verify", isLoading: vm.isLoading) {
+            PrimaryButton(title: L.verify, isLoading: vm.isLoading) {
                 Task { await vm.verifyOTP() }
             }
 
-            Button("Change number") { vm.step = .phone }
+            Button(L.changeNumber) { vm.step = .phone }
                 .font(.mtCaption)
                 .foregroundStyle(Color.mtSecondary)
         }
@@ -386,12 +394,12 @@ struct NameStep: View {
 
     var body: some View {
         VStack(spacing: Spacing.md) {
-            Text("What should friends call you?")
+            Text(L.whatShouldFriendsCall)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
 
-            TextField("Your name", text: $vm.displayName)
+            TextField(L.yourName, text: $vm.displayName)
                 .font(.mtBody)
                 .padding(Spacing.md)
                 .background(Color.mtSurface)
@@ -399,9 +407,79 @@ struct NameStep: View {
                 .focused($focused)
                 .onAppear { focused = true }
 
-            PrimaryButton(title: "Get started", isLoading: vm.isLoading) {
+            PrimaryButton(title: L.getStarted, isLoading: vm.isLoading) {
                 Task { await vm.saveName() }
             }
+        }
+    }
+}
+
+// MARK: - Language Picker (First Onboarding Screen)
+
+struct LanguagePickerOnboarding: View {
+    let onContinue: () -> Void
+    @AppStorage("appLanguage") private var language: String = "en"
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            // Globe icon
+            Image(systemName: "globe")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.mtTertiary)
+                .padding(.bottom, Spacing.lg)
+
+            // Both languages shown always (no localization needed here)
+            Text("Choose your language")
+                .font(.mtTitle)
+                .foregroundStyle(Color.mtLabel)
+                .padding(.bottom, 4)
+
+            Text("选择你的语言")
+                .font(.system(size: 17))
+                .foregroundStyle(Color.mtSecondary)
+                .padding(.bottom, Spacing.xl)
+
+            // Language options
+            VStack(spacing: Spacing.md) {
+                ForEach(AppLanguage.allCases) { lang in
+                    Button {
+                        withAnimation(.mtSpring) { language = lang.rawValue }
+                    } label: {
+                        HStack {
+                            Text(lang.displayName)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(Color.mtLabel)
+                            Spacer()
+                            if language == lang.rawValue {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(Color.mtAccent)
+                            } else {
+                                Circle()
+                                    .stroke(Color.mtTertiary, lineWidth: 1.5)
+                                    .frame(width: 22, height: 22)
+                            }
+                        }
+                        .padding(Spacing.md)
+                        .background(language == lang.rawValue ? Color.mtLabel.opacity(0.05) : Color.mtSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.button))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Spacing.xl)
+
+            Spacer()
+            Spacer()
+
+            // Continue button (localized since language is already picked)
+            PrimaryButton(title: L.continueBtn, isLoading: false) {
+                onContinue()
+            }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, Spacing.xxl)
         }
     }
 }

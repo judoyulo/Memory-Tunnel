@@ -37,7 +37,7 @@ struct OnThisDayCard: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.mtLabel)
                 if let loc = memory.locationName {
-                    Text("at \(loc)")
+                    Text(L.atLocation(loc))
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtSecondary)
                         .lineLimit(1)

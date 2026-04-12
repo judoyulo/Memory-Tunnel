@@ -28,25 +28,22 @@ DESIGN.md written to repo root. Background: `#F5EAD8` warm cream. Full token set
 **Fix:** `DELETE /api/v1/chapters/:id` endpoint + rollback on iOS upload error.
 **File:** `ios/MemoryTunnel/Views/Onboarding/SmartStartView.swift:116`
 
-### Voice playback silent failure — P2
-`VoiceClipTileView.downloadAudioIfNeeded()` silently fails on network error or expired signed URL.
-**Fix:** Show error state or retry CTA in the sheet.
-**File:** `ios/MemoryTunnel/Views/Chapter/ChapterDetailView.swift`
+### ~~Voice playback silent failure~~ — PARTIALLY FIXED (2026-04-05)
+CinematicVoicePlayer now shows "Tap to retry" on download failure or expired URL. Handles 403 (expired presign) explicitly.
+**Remaining:** Proactive URL refresh before expiry (see Signed URL TTL below).
+**File:** `ios/MemoryTunnel/Views/Chapter/CinematicMemoryCard.swift`
 
 ### Signed URL TTL not tracked client-side — P2
 Media URLs expire after ~60 min. `refresh_url` endpoint exists but iOS never calls it proactively.
 **Fix:** Track `signedAt` timestamp on `Memory`, call `refresh_url` when TTL > 50 min.
 **File:** `ios/MemoryTunnel/Models/Models.swift`
 
-### Face index migration on update — P3
-Existing `face_index.json` in `Documents/` won't migrate to `Application Support/` automatically. First post-update launch silently starts a fresh index.
-**Fix:** On init, check old path and move file if present (one-time migration).
-**File:** `ios/MemoryTunnel/Services/FaceIndexService.swift`
+### ~~Face index migration on update~~ — RESOLVED
+FaceIndexService deleted entirely, replaced by FaceEmbeddingService. No migration needed — fresh embeddings are generated on first scan.
 
-### AVAudioSession not deactivated after playback — P3
-`VoicePlayerView.stopPlayback()` doesn't call `AVAudioSession.sharedInstance().setActive(false)`.
-Low impact (playback category only, not record), but can interfere with other apps.
-**File:** `ios/MemoryTunnel/Views/SendFlow/VoiceFlowView.swift`
+### ~~AVAudioSession not deactivated after playback~~ — FIXED (2026-04-05)
+`CinematicVoicePlayer.stopPlayback()` now calls `setActive(false, options: .notifyOthersOnDeactivation)`.
+**File:** `ios/MemoryTunnel/Views/Chapter/CinematicMemoryCard.swift`
 
 ### Branch.io SPM package must be added to Xcode project — P1
 Code is wired (`MemoryTunnelApp.swift` imports `BranchSDK`, `AppDelegate` calls `Branch.getInstance().initSession`).
@@ -116,6 +113,28 @@ Boot check initializer (`apns_check.rb`) logs a warning if these are missing.
 **Depends on:** Chapter timeline redesign (memory data access patterns)
 
 ---
+
+## ✓ DONE — Shipped 2026-04-05
+
+### ~~Today Tab photo discovery feed~~ — COMPLETE (2026-04-05)
+Full-screen swipeable cards from photo library. Two types: "new face" (no chapter) and "unsaved memory" (has chapter). User face pre-scan skips selfies. 21 cards max, 3 per person dedup, 1500 photo scan budget.
+**Files:** `TodayFeedService.swift`, `DailyCardContainerView.swift`, `FacePickerSheet.swift`
+
+### ~~Cinematic chapter timeline~~ — COMPLETE (2026-04-05)
+Film-strip vertical scroll with distance-based card sizing (1.0x center, 0.3x edges). Photo/text/voice/location card types. Interactive year scrubber with drag + haptics.
+**Files:** `CinematicTimelineView.swift`, `CinematicMemoryCard.swift`, `TimelineScrubberView.swift`
+
+### ~~Splash screen animation~~ — COMPLETE (2026-04-06)
+Ring draw-on + amber center breathe + floating particles + "tunneling in..." typewriter text. Respects Reduce Motion.
+**File:** `ios/MemoryTunnel/Views/Launch/SplashView.swift`
+
+### ~~Scan progress ring~~ — COMPLETE (2026-04-06)
+Activity ring with monospace counter, orbiting dot, rotating phrases ("tunneling through memories...", "the algorithm is vibing"). Deep scan mode turns amber with treasure-hunt phrases.
+**File:** `ios/MemoryTunnel/Views/Components/ScanProgressRing.swift`
+
+### ~~Daily Dig (suggested photos)~~ — COMPLETE (2026-04-06)
+Scans 1000 fresh photos per session instead of 5000 at once. Persists scanned/found IDs. Previous finds load instantly. Today's new finds get sparkle badge. Coverage % pill. "come back tomorrow" retention loop.
+**File:** `ios/MemoryTunnel/Views/Chapter/SuggestedPhotosView.swift`
 
 ### ~~Replace Vision landmarks with Core ML face embeddings~~ — COMPLETE (2026-04-04)
 Integrated MobileFaceNet (w600k_mbf, 6.6MB, 512-dim embeddings) via CoreML. Deleted FaceIndexService entirely.

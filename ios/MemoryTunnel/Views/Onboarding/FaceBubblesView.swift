@@ -22,7 +22,7 @@ struct FaceBubblesView: View {
             VStack(spacing: 0) {
                 // Header
                 VStack(spacing: Spacing.xs) {
-                    Text(isScanning ? "Finding people you care about..." : "People from your photos")
+                    Text(isScanning ? L.findingPeople : L.peopleFromPhotos)
                         .font(.mtEmptyTitle)
                         .foregroundStyle(Color.mtLabel)
 
@@ -71,7 +71,7 @@ struct FaceBubblesView: View {
                                     value: appeared
                                 )
                                 .accessibilityLabel(isCompleted
-                                    ? "Chapter created for this person"
+                                    ? L.chapterCreated()
                                     : "Person appearing in \(suggestion.count) photos"
                                 )
                             }
@@ -88,7 +88,7 @@ struct FaceBubblesView: View {
 
                 // Bottom actions
                 VStack(spacing: Spacing.md) {
-                    Button("Choose photos manually") {
+                    Button(L.choosePhotosManually) {
                         onManualCreate()
                     }
                     .font(.mtButton)
@@ -100,7 +100,7 @@ struct FaceBubblesView: View {
                             .stroke(Color.mtLabel, lineWidth: 1.5)
                     )
 
-                    Button("Skip") {
+                    Button(L.skip) {
                         onSkip()
                     }
                     .font(.mtCaption)

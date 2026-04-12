@@ -61,8 +61,8 @@ struct CinematicMemoryCard: View {
     private func nonInteractiveCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
             .contextMenu {
-                Button { onEdit() } label: { Label("Edit", systemImage: "pencil") }
-                Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+                Button { onEdit() } label: { Label(L.edit, systemImage: "pencil") }
+                Button(role: .destructive, action: onDelete) { Label(L.delete, systemImage: "trash") }
             }
     }
 
@@ -99,7 +99,7 @@ struct CinematicMemoryCard: View {
                                     Image(systemName: "arrow.clockwise")
                                         .font(.system(size: 24))
                                         .foregroundStyle(Color.mtTertiary)
-                                    Text("Tap to reload")
+                                    Text(L.tapToReload)
                                         .font(.system(size: 10))
                                         .foregroundStyle(Color.mtTertiary)
                                 }
@@ -127,8 +127,8 @@ struct CinematicMemoryCard: View {
         .buttonStyle(.plain)
         .frame(height: cardHeight)
         .contextMenu {
-            Button { onEdit() } label: { Label("Edit", systemImage: "pencil") }
-            Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+            Button { onEdit() } label: { Label(L.edit, systemImage: "pencil") }
+            Button(role: .destructive, action: onDelete) { Label(L.delete, systemImage: "trash") }
         }
     }
 
@@ -229,8 +229,8 @@ struct CinematicMemoryCard: View {
             // Footer with context menu for edit/delete
             metadataFooter
                 .contextMenu {
-                    Button { onEdit() } label: { Label("Edit", systemImage: "pencil") }
-                    Button(role: .destructive, action: onDelete) { Label("Delete", systemImage: "trash") }
+                    Button { onEdit() } label: { Label(L.edit, systemImage: "pencil") }
+                    Button(role: .destructive, action: onDelete) { Label(L.delete, systemImage: "trash") }
                 }
         }
         .frame(maxWidth: .infinity)
@@ -250,7 +250,7 @@ struct CinematicMemoryCard: View {
                     .font(.system(size: 40))
                     .foregroundStyle(Color.mtSecondary)
 
-                Text(memory.locationName ?? "Somewhere")
+                Text(memory.locationName ?? L.somewhere)
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(Color.mtLabel)
 
@@ -300,8 +300,8 @@ struct CinematicMemoryCard: View {
 
     private var senderLabel: String {
         let isOwn = memory.ownerID == currentUserID
-        if isOwn { return "— You" }
-        return "— \(partnerName ?? "them")"
+        if isOwn { return L.senderYou }
+        return L.senderName(partnerName ?? "them")
     }
 }
 
@@ -367,11 +367,11 @@ struct CinematicVoicePlayer: View {
 
             // Status text
             if showError {
-                Text("Tap to retry")
+                Text(L.tapToRetry)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtError)
             } else {
-                Text(isPlaying ? "Playing..." : "Voice clip")
+                Text(isPlaying ? L.playing : L.voiceClip)
                     .font(.mtCaption)
                     .foregroundStyle(Color.mtSecondary)
             }

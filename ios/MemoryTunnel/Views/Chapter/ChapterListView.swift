@@ -48,7 +48,7 @@ struct ChapterListView: View {
                     ProgressView()
                 } else if let err = vm.errorMessage, vm.chapters.isEmpty {
                     VStack(spacing: Spacing.md) {
-                        Text("Couldn't load chapters")
+                        Text(L.couldntLoadMemoryLanes)
                             .font(.mtTitle)
                             .foregroundStyle(Color.mtLabel)
                         Text(err)
@@ -79,7 +79,7 @@ struct ChapterListView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("Chapters")
+            .navigationTitle(L.memoryLanes)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -87,12 +87,12 @@ struct ChapterListView: View {
                         Button {
                             showInviteFlow = true
                         } label: {
-                            Label("Create chapter", systemImage: "person.badge.plus")
+                            Label(L.createMemoryLane, systemImage: "person.badge.plus")
                         }
                         Button {
                             showFaceScan = true
                         } label: {
-                            Label("Find people in photos", systemImage: "person.viewfinder")
+                            Label(L.findPeopleInPhotos, systemImage: "person.viewfinder")
                         }
                     } label: {
                         Image(systemName: "plus")
@@ -169,7 +169,7 @@ struct ChapterTileView: View {
                     .foregroundStyle(Color.mtLabel)
 
                 if chapter.status == "pending" {
-                    Text("Invite not sent yet")
+                    Text(L.inviteNotSent)
                         .font(.mtCaption)
                         .foregroundStyle(Color.mtTertiary)
                 } else if let tag = chapter.lifeChapterTag {
@@ -186,13 +186,13 @@ struct ChapterTileView: View {
                 Button {
                     showShareSheet = true
                 } label: {
-                    Text("Share")
+                    Text(L.share)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.mtLabel)
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
-                .accessibilityLabel("Share invite link for \(chapter.name ?? "this chapter")")
+                .accessibilityLabel(L.shareInviteFor(chapter.name ?? "this chapter"))
             } else if isDecayed {
                 // Decay indicator (accent dot — emotional peak)
                 Circle()
@@ -206,7 +206,7 @@ struct ChapterTileView: View {
         .sheet(isPresented: $showShareSheet) {
             // Pending chapters may not have an invitation yet.
             // If we have no URL, show a placeholder message.
-            Text("Invite link unavailable.\nTry opening the chapter to generate one.")
+            Text(L.inviteLinkUnavailable)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
@@ -237,16 +237,16 @@ struct ChapterListEmptyView: View {
             Image(systemName: "envelope.heart.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(Color.mtTertiary)
-            Text("Start your first chapter")
+            Text(L.startYourFirst)
                 .font(.mtEmptyTitle)
                 .foregroundStyle(Color.mtLabel)
-            Text("Send a first memory to someone\nyou want to stay close to.")
+            Text(L.sendFirstMemory)
                 .font(.mtBody)
                 .foregroundStyle(Color.mtSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
             Button(action: onInvite) {
-                Text("Invite someone")
+                Text(L.inviteSomeone)
                     .font(.mtButton)
                     .foregroundStyle(Color.mtBackground)
                     .frame(maxWidth: .infinity)
