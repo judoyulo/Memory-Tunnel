@@ -33,7 +33,7 @@ actor APIClient {
 
     private let baseURL: URL = {
         let raw = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String
-                ?? "http://localhost:3000"
+                ?? "https://memory-tunnel-api.fly.dev"
         return URL(string: raw)!
     }()
 

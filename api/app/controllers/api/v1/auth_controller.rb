@@ -25,12 +25,9 @@ module Api
           user.save!
         end
 
-        code = user.generate_otp!
-        TwilioOtpJob.perform_later(phone: phone, code: code)
+        TwilioOtpJob.perform_later(phone: phone)
 
-        response_body = { message: "OTP sent" }
-        response_body[:dev_code] = code if Rails.env.local?
-        render json: response_body, status: :ok
+        render json: { message: "OTP sent" }, status: :ok
       rescue ActiveRecord::RecordInvalid => e
         render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
       end
@@ -46,8 +43,20 @@ module Api
 
         user = User.find_by!(phone: phone)
 
-        unless user.verify_otp!(code)
-          return render json: { error: "Invalid or expired code" }, status: :unprocessable_entity
+        # Verify via Twilio Verify API (production) or local bcrypt (development)
+        if Rails.env.local?
+          unless user.verify_otp!(code)
+            return render json: { error: "Invalid or expired code" }, status: :unprocessable_entity
+          end
+        else
+          check = twilio_client.verify
+            .v2
+            .services(ENV.fetch("TWILIO_VERIFY_SID"))
+            .verification_checks
+            .create(to: phone, code: code)
+          unless check.status == "approved"
+            return render json: { error: "Invalid or expired code" }, status: :unprocessable_entity
+          end
         end
 
         user.update!(display_name: display_name) if display_name.present?
@@ -100,6 +109,13 @@ module Api
 
       def chapter_json(chapter)
         { id: chapter.id, status: chapter.status }
+      end
+
+      def twilio_client
+        @twilio_client ||= Twilio::REST::Client.new(
+          ENV.fetch("TWILIO_ACCOUNT_SID"),
+          ENV.fetch("TWILIO_AUTH_TOKEN")
+        )
       end
     end
   end
