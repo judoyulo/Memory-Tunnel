@@ -26,41 +26,39 @@ platform :ios do
   #   ASC_KEY_CONTENT    — Base64-encoded .p8 key file content
   #
   lane :beta do
-    # Increment build number from latest TestFlight build
-    latest_build = latest_testflight_build_number(
-      app_identifier: BUNDLE_ID
-    )
-    increment_build_number(
-      build_number: latest_build + 1,
-      xcodeproj:    XCODEPROJ
-    )
-
-    # Fetch Distribution certs + provisioning profiles via match
-    match(
-      type:                 "appstore",
-      app_identifier:       [BUNDLE_ID, "#{BUNDLE_ID}.widget"],
-      readonly:             is_ci,
-      git_url:              ENV["MATCH_GIT_URL"],
-      password:             ENV["MATCH_PASSWORD"]
-    )
-
-    # Build
-    gym(
-      scheme:              SCHEME,
-      export_method:       "app-store",
-      xcargs:              "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}",
-      output_directory:    "build",
-      output_name:         "MemoryTunnel.ipa",
-      clean:               true
-    )
-
-    # Upload to TestFlight
+    # App Store Connect API key
     api_key = app_store_connect_api_key(
       key_id:        ENV["ASC_KEY_ID"],
       issuer_id:     ENV["ASC_ISSUER_ID"],
       key_content:   Base64.decode64(ENV["ASC_KEY_CONTENT"])
     )
 
+    # Increment build number from latest TestFlight build
+    latest_build = latest_testflight_build_number(
+      api_key:        api_key,
+      app_identifier: BUNDLE_ID
+    )
+    new_build = (latest_build + 1).to_s
+    increment_build_number_in_xcodeproj(
+      build_number: new_build,
+      xcodeproj:    XCODEPROJ
+    )
+
+    # Build with Xcode automatic signing
+    gym(
+      scheme:              SCHEME,
+      export_method:       "app-store",
+      export_options:      {
+        signingStyle:        "automatic",
+        teamID:              ENV["APPLE_TEAM_ID"]
+      },
+      xcargs:              "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates",
+      output_directory:    "build",
+      output_name:         "MemoryTunnel.ipa",
+      clean:               true
+    )
+
+    # Upload to TestFlight
     pilot(
       api_key:                    api_key,
       ipa:                        "build/MemoryTunnel.ipa",

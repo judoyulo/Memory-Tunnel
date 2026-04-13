@@ -36,3 +36,5 @@ ios/*.ipa
 ios/*.dSYM.zip
 ios/*.dSYM
 .gstack/
+.env.local
+AuthKey_*.p8
