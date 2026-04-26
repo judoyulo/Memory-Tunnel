@@ -124,12 +124,16 @@ final class SmartStartViewModel: ObservableObject {
 
         state = .uploading
 
+        // Track chapter for rollback on failure (avoid orphaned pending chapters)
+        var createdChapterID: String?
+
         do {
             // 1. Create chapter
             let chapter = try await APIClient.shared.createChapter(
                 name: name.isEmpty ? nil : name
             )
             let chapterID = chapter.id
+            createdChapterID = chapterID
 
             // 2. Compress
             guard let data = image.jpegData(compressionQuality: 0.85) else {
@@ -167,6 +171,10 @@ final class SmartStartViewModel: ObservableObject {
             )
 
         } catch {
+            // Rollback orphan chapter on any failure between create and complete
+            if let id = createdChapterID {
+                Task { try? await APIClient.shared.deleteChapter(id: id) }
+            }
             errorMessage = error.localizedDescription
             // Step back to captioning so user can retry
             if case .uploading = state {

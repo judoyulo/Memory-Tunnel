@@ -120,6 +120,17 @@ actor APIClient {
         try await get("/api/v1/chapters/\(chapterID)/memories", queryItems: [URLQueryItem(name: "page", value: "\(page)")])
     }
 
+    /// Fetch a fresh signed S3 URL for a memory whose presigned TTL is about to expire.
+    /// Server signs URLs with 1hr TTL; client should call this when local age > 50 min.
+    func refreshMemoryURL(chapterID: String, memoryID: String) async throws -> URL {
+        struct RefreshResponse: Decodable {
+            let mediaURL: URL
+            enum CodingKeys: String, CodingKey { case mediaURL = "media_url" }
+        }
+        let response: RefreshResponse = try await get("/api/v1/chapters/\(chapterID)/memories/\(memoryID)/refresh_url")
+        return response.mediaURL
+    }
+
     func presign(chapterID: String, contentType: String = "image/jpeg") async throws -> PresignResponse {
         try await post("/api/v1/chapters/\(chapterID)/memories/presign",
                        body: ["content_type": contentType])
