@@ -77,7 +77,18 @@ struct Memory: Codable, Identifiable, Equatable {
     var longitude: Double?
     let createdAt: Date
 
+    /// When this memory's mediaURL was signed (set at decode time).
+    /// Used to proactively refresh URLs before the 1hr presigned TTL expires.
+    var signedAt: Date = Date()
+
     var isVoice: Bool { mediaType == "voice" }
+
+    /// Returns true when the signed mediaURL is approaching its 1hr expiry.
+    /// Triggers a proactive refresh at 50 minutes (10min safety margin).
+    var needsURLRefresh: Bool {
+        guard mediaURL != nil else { return false }
+        return Date().timeIntervalSince(signedAt) > 50 * 60
+    }
 
     /// The single source-of-truth date for display and sorting.
     /// Prefers event_date (parsed from "yyyy-MM-dd"), then taken_at, then created_at.

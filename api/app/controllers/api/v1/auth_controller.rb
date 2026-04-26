@@ -16,13 +16,30 @@ module Api
       # POST /api/v1/auth/send_otp
       # Body: { phone: "+14155551234" }
       # Sends a 6-digit SMS OTP. Idempotent — safe to call again if code expires.
+      # Demo account for App Store review — fixed credentials, no SMS sent
+      DEMO_PHONE = "+15550000000"
+      DEMO_OTP   = "000000"
+
       def send_otp
         phone = params.require(:phone).strip
         user  = User.find_or_initialize_by(phone: phone)
 
         if user.new_record?
-          user.display_name = "User"  # Placeholder; user sets it after OTP verify
+          user.display_name = phone == DEMO_PHONE ? "Demo User" : "User"
           user.save!
+        end
+
+        # Demo account: skip Twilio, use fixed code (so App Store reviewers can sign in)
+        if phone == DEMO_PHONE
+          user.generate_otp!(override_code: DEMO_OTP)
+          return render json: { message: "OTP sent" }, status: :ok
+        end
+
+        # In dev/test, generate a local bcrypt OTP and return it so devs/specs can
+        # verify without hitting Twilio. In production we delegate to Twilio Verify.
+        if Rails.env.local?
+          code = user.generate_otp!
+          return render json: { message: "OTP sent", dev_code: code }, status: :ok
         end
 
         TwilioOtpJob.perform_later(phone: phone)
@@ -43,8 +60,8 @@ module Api
 
         user = User.find_by!(phone: phone)
 
-        # Verify via Twilio Verify API (production) or local bcrypt (development)
-        if Rails.env.local?
+        # Verify: demo account and dev use local bcrypt, production uses Twilio Verify
+        if Rails.env.local? || phone == DEMO_PHONE
           unless user.verify_otp!(code)
             return render json: { error: "Invalid or expired code" }, status: :unprocessable_entity
           end
@@ -84,13 +101,10 @@ module Api
 
       # POST /api/v1/auth/dev_login
       # Body: { code: "8888" }
-      # Development only. Creates a fresh user and returns a JWT. For quick testing.
+      # Creates a fresh user with a random phone number. For quick testing/demos.
+      # Each call returns a NEW user so the full onboarding flow plays out.
       def dev_login
-        unless Rails.env.local?
-          return render json: { error: "Not available in production" }, status: :forbidden
-        end
-
-        unless params[:code] == "8888"
+        unless params[:code] == ENV.fetch("DEV_LOGIN_CODE", "8888")
           return render json: { error: "Invalid developer code" }, status: :unprocessable_entity
         end
 

@@ -7,6 +7,9 @@ struct SettingsView: View {
     @AppStorage("appLanguage") private var language: String = "en"
     @EnvironmentObject var appState: AppState
     @State private var showResetConfirm = false
+    @State private var showDeleteConfirm = false
+    @State private var deleteError: String?
+    @State private var isDeletingAccount = false
 
     var body: some View {
         NavigationStack {
@@ -45,6 +48,21 @@ struct SettingsView: View {
                         }
                         .foregroundStyle(Color.mtError)
                     }
+
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        HStack {
+                            if isDeletingAccount {
+                                ProgressView().scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "trash")
+                            }
+                            Text(L.deleteAccount)
+                        }
+                        .foregroundStyle(Color.mtError)
+                    }
+                    .disabled(isDeletingAccount)
                 } header: {
                     Text(L.account)
                 }
@@ -61,12 +79,40 @@ struct SettingsView: View {
             } message: {
                 Text(L.resetAccountConfirm)
             }
+            .alert(L.deleteAccount, isPresented: $showDeleteConfirm) {
+                Button(L.deleteAccountButton, role: .destructive) {
+                    Task { await deleteAccount() }
+                }
+                Button(L.cancel, role: .cancel) {}
+            } message: {
+                Text(L.deleteAccountConfirm)
+            }
+            .alert("Error", isPresented: .constant(deleteError != nil)) {
+                Button("OK") { deleteError = nil }
+            } message: {
+                Text(deleteError ?? "")
+            }
+        }
+    }
+
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        defer { isDeletingAccount = false }
+        do {
+            try await APIClient.shared.deleteAccount()
+            // Server side gone — now wipe local state
+            resetAccount()
+        } catch {
+            deleteError = error.localizedDescription
         }
     }
 
     private func resetAccount() {
         // Clear auth
         appState.signOut()
+
+        // Force full onboarding on next login (overrides returning-user shortcut)
+        UserDefaults.standard.set(true, forKey: "forceOnboardingAfterReset")
 
         // Clear onboarding flags
         UserDefaults.standard.removeObject(forKey: "smartStartCompleted")

@@ -36,6 +36,14 @@ final class ChapterDetailViewModel: ObservableObject {
         }
     }
 
+    /// Refreshes signed S3 URLs for memories whose 1hr presigned TTL is approaching.
+    /// Called on scenePhase change (.active) so users returning from background see fresh URLs
+    /// instead of broken thumbnails.
+    func refreshStaleURLsIfNeeded() async {
+        guard memories.contains(where: \.needsURLRefresh) else { return }
+        await load() // Simpler than per-URL refresh; one extra GET, all URLs renewed
+    }
+
     func deleteMemory(_ memory: Memory) async {
         do {
             try await APIClient.shared.deleteMemory(chapterID: chapterID, memoryID: memory.id)
@@ -99,6 +107,7 @@ struct ChapterDetailView: View {
     @State private var showPhotoPicker = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var dismissOnThisDay = false
+    @Environment(\.scenePhase) private var scenePhase
     @State private var viewMode: ChapterViewMode
     @State private var batchImages: [(image: UIImage, takenAt: Date?)] = []
 
@@ -214,6 +223,13 @@ struct ChapterDetailView: View {
         }
         .faceTaggingOverlay(for: chapter)
         .task { await vm.load() }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Refresh signed S3 URLs when returning to foreground.
+            // Photos break after 1hr because presigned URLs expire — proactive refresh prevents broken thumbnails.
+            if newPhase == .active {
+                Task { await vm.refreshStaleURLsIfNeeded() }
+            }
+        }
     }
 
     // MARK: - Sheet Content

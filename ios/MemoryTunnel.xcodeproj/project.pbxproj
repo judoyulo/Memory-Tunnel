@@ -14,10 +14,10 @@
 		10C2775AADF50F2EA5C46649 /* TimelineMemoryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9655209F364668AF229806 /* TimelineMemoryCard.swift */; };
 		12AA450D3581D90BFFC79B29 /* PHAssetThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F8F866A6F13DC70F180DB20 /* PHAssetThumbnailView.swift */; };
 		15AE46EAE5DA1A5EF692BB50 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9FA6F1F64C171D8F2E7EAC /* Models.swift */; };
-		1B38D92F29DDB4C8017703FE /* VoiceRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D58D70B2D52A721DE1405315 /* VoiceRecorderView.swift */; };
-		1B4F9FD1BDD6E7468248AE8C /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEB97A3C94A9313D9DBD54F /* WelcomeView.swift */; };
 		1A1111111111111111111111 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222222 /* L10n.swift */; };
 		1A3333333333333333333333 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A4444444444444444444444 /* SettingsView.swift */; };
+		1B38D92F29DDB4C8017703FE /* VoiceRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D58D70B2D52A721DE1405315 /* VoiceRecorderView.swift */; };
+		1B4F9FD1BDD6E7468248AE8C /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEB97A3C94A9313D9DBD54F /* WelcomeView.swift */; };
 		1B9BE1CBAAF5A716615D3A2F /* InviteFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 622DA1C3E1E0F8D49A5B16C2 /* InviteFlowView.swift */; };
 		1C7659B18C71CE78B7B988DA /* FacePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F419AD02848138B876B61995 /* FacePickerSheet.swift */; };
 		1C7659B28C71CE78B7B988DB /* ShareCardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F419AD03848138B876B61996 /* ShareCardSheet.swift */; };
@@ -80,6 +80,8 @@
 		05FA7FD14E8E24CFB7534860 /* ChapterFaceConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterFaceConfirmationView.swift; sourceTree = "<group>"; };
 		1527B86F2568D595484A547C /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		191C0F35232D766850FA7A4A /* ReconnectionCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReconnectionCardView.swift; sourceTree = "<group>"; };
+		1A2222222222222222222222 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		1A4444444444444444444444 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1CB760502D99E6F5061C9EC2 /* AppIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconView.swift; sourceTree = "<group>"; };
 		233F84CF8A93B4E3446B18F5 /* ReconnectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReconnectionService.swift; sourceTree = "<group>"; };
 		23C273D3D98FC91476FEFAA7 /* InvitedLandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitedLandingView.swift; sourceTree = "<group>"; };
@@ -451,8 +453,6 @@
 			dependencies = (
 			);
 			name = MemoryTunnel;
-			packageProductDependencies = (
-			);
 			productName = MemoryTunnel;
 			productReference = E78CD8E3F994E55AD801203C /* MemoryTunnel.app */;
 			productType = "com.apple.product-type.application";
@@ -581,7 +581,9 @@
 				API_BASE_URL = "http://JY-Personal-Air.local:3000";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = V95ARSBBXT;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MemoryTunnel/Info.plist;
@@ -589,6 +591,7 @@
 				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app;
 				PRODUCT_NAME = MemoryTunnel;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Debug;
 		};
@@ -622,13 +625,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MemoryTunnel/MemoryTunnel.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = V95ARSBBXT;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MemoryTunnel/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.memorytunnel.app;
 				PRODUCT_NAME = MemoryTunnel;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Release;
 		};

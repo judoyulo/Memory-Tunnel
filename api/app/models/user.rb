@@ -24,8 +24,8 @@ class User < ApplicationRecord
   # ── OTP ─────────────────────────────────────────────────────────────────────
   # Generates a 6-digit OTP, stores bcrypt digest, returns the plaintext code
   # so the caller can send it via Twilio.
-  def generate_otp!
-    code = SecureRandom.random_number(10**6).to_s.rjust(6, "0")
+  def generate_otp!(override_code: nil)
+    code = override_code || SecureRandom.random_number(10**6).to_s.rjust(6, "0")
     update!(
       otp_code: ::BCrypt::Password.create(code),
       otp_expires_at: ENV.fetch("OTP_EXPIRY_MINUTES", 10).to_i.minutes.from_now

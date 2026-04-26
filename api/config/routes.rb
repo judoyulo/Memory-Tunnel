@@ -13,8 +13,9 @@ Rails.application.routes.draw do
       post "auth/dev_login"   # POST { code: "8888" } → fresh user, dev only
 
       # Current user
-      get   "me", to: "me#show"   # GET → current user profile
-      patch "me", to: "me#update" # PATCH → update display_name / push_token
+      get    "me", to: "me#show"   # GET → current user profile
+      patch  "me", to: "me#update" # PATCH → update display_name / push_token
+      delete "me", to: "me#destroy" # DELETE → permanent account deletion + cascade
 
       # Chapters
       resources :chapters, only: %i[index show create destroy] do

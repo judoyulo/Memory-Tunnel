@@ -84,6 +84,12 @@ actor APIClient {
         return try await patch("/api/v1/me", body: body)
     }
 
+    /// Permanently deletes the user's account on the server.
+    /// All memories, chapters owned by this user, and S3 media are purged.
+    func deleteAccount() async throws {
+        try await delete("/api/v1/me")
+    }
+
     // MARK: Chapters
 
     func chapters() async throws -> [Chapter] {
@@ -112,6 +118,17 @@ actor APIClient {
 
     func memories(chapterID: String, page: Int = 1) async throws -> [Memory] {
         try await get("/api/v1/chapters/\(chapterID)/memories", queryItems: [URLQueryItem(name: "page", value: "\(page)")])
+    }
+
+    /// Fetch a fresh signed S3 URL for a memory whose presigned TTL is about to expire.
+    /// Server signs URLs with 1hr TTL; client should call this when local age > 50 min.
+    func refreshMemoryURL(chapterID: String, memoryID: String) async throws -> URL {
+        struct RefreshResponse: Decodable {
+            let mediaURL: URL
+            enum CodingKeys: String, CodingKey { case mediaURL = "media_url" }
+        }
+        let response: RefreshResponse = try await get("/api/v1/chapters/\(chapterID)/memories/\(memoryID)/refresh_url")
+        return response.mediaURL
     }
 
     func presign(chapterID: String, contentType: String = "image/jpeg") async throws -> PresignResponse {

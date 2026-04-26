@@ -14,6 +14,19 @@ module Api
         render json: user_json(current_user)
       end
 
+      # DELETE /api/v1/me
+      # Permanently deletes the user and cascades to:
+      #   - All memories owned by this user (S3 objects purged via after_destroy_commit)
+      #   - All chapters where this user is member_a (and all their memories)
+      #   - Chapters where this user is member_b are nullified (partner stays in their lane)
+      #   - All invitations sent by this user
+      #   - All daily card queue entries for this user
+      # Required for Apple App Store compliance + GDPR.
+      def destroy
+        current_user.destroy!
+        render json: { message: "Account deleted" }, status: :ok
+      end
+
       private
 
       def user_params

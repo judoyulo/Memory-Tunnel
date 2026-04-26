@@ -91,8 +91,10 @@ final class OnboardingViewModel: ObservableObject {
                 invitationToken: token
             )
             if token != nil { DeepLinkStore.shared.pendingInvitationToken = nil }
-            // New user → ask for name; returning user → done
-            if response.user.displayName == "User" {
+            // New user OR post-reset → full onboarding; returning user → done
+            let forceOnboarding = UserDefaults.standard.bool(forKey: "forceOnboardingAfterReset")
+            if response.user.displayName == "User" || forceOnboarding {
+                UserDefaults.standard.removeObject(forKey: "forceOnboardingAfterReset")
                 step = .name
             } else {
                 isComplete = true
@@ -300,13 +302,14 @@ struct PhoneStep: View {
                 Task { await vm.sendOTP() }
             }
 
-            #if DEBUG
-            Button("Developer Login") {
-                vm.step = .devCode
+            // Dev login: hidden in App Store builds, visible in Debug + TestFlight
+            if BuildEnvironment.isDevOrTestFlight {
+                Button("Developer Login") {
+                    vm.step = .devCode
+                }
+                .font(.mtCaption)
+                .foregroundStyle(Color.mtTertiary)
             }
-            .font(.mtCaption)
-            .foregroundStyle(Color.mtTertiary)
-            #endif
         }
     }
 }

@@ -48,6 +48,9 @@ enum L {
     static var language: String { isCN ? "语言" : "Language" }
     static var resetAccount: String { isCN ? "重置账号" : "Reset Account" }
     static var resetAccountConfirm: String { isCN ? "确定要重置账号吗？所有本地数据将被清除，你需要重新登录。" : "Are you sure? All local data will be cleared and you'll need to sign in again." }
+    static var deleteAccount: String { isCN ? "永久删除账号" : "Delete Account" }
+    static var deleteAccountButton: String { isCN ? "永久删除" : "Delete Forever" }
+    static var deleteAccountConfirm: String { isCN ? "此操作不可撤销。所有记忆空间、照片、语音、文字记录将被永久删除。如果你是某个记忆空间的创建者，对方也会失去访问权限。" : "This cannot be undone. All your memory lanes, photos, voice clips, and text will be permanently deleted. If you created a memory lane, your partner will lose access too." }
     static var resetAccountButton: String { isCN ? "重置" : "Reset" }
     static var account: String { isCN ? "账号" : "Account" }
 

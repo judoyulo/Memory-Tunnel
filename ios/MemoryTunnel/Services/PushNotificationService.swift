@@ -70,12 +70,18 @@ final class NotificationRouter: ObservableObject {
         }
     }
 
-    /// Handle `memorytunnel://` URL scheme (widget taps, Branch deep links).
-    /// Format: memorytunnel://chapter/{chapterID}
+    /// Handle `memorytunnel://` URL scheme (widget taps, Branch deep links, invitation links).
+    /// Formats:
+    ///   memorytunnel://chapter/{chapterID}
+    ///   memorytunnel://invite/{invitationToken}
     func route(url: URL) {
         guard url.scheme == "memorytunnel" else { return }
         if url.host == "chapter", let chapterID = url.pathComponents.dropFirst().first {
             pendingChapterID = chapterID
+            return
+        }
+        if url.host == "invite", let token = url.pathComponents.dropFirst().first {
+            DeepLinkStore.shared.pendingInvitationToken = token
         }
     }
 }
