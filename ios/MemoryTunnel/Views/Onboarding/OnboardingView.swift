@@ -279,6 +279,17 @@ struct OnboardingView: View {
 
 // MARK: - Phone Step
 
+/// True for Debug builds AND TestFlight builds. False for App Store production.
+/// Detection: TestFlight builds have a sandbox receipt named "sandboxReceipt".
+private var isDevOrTestFlightBuild: Bool {
+    #if DEBUG
+    return true
+    #else
+    guard let url = Bundle.main.appStoreReceiptURL else { return false }
+    return url.lastPathComponent == "sandboxReceipt"
+    #endif
+}
+
 struct PhoneStep: View {
     @ObservedObject var vm: OnboardingViewModel
     @FocusState private var focused: Bool
@@ -303,7 +314,7 @@ struct PhoneStep: View {
             }
 
             // Dev login: hidden in App Store builds, visible in Debug + TestFlight
-            if BuildEnvironment.isDevOrTestFlight {
+            if isDevOrTestFlightBuild {
                 Button("Developer Login") {
                     vm.step = .devCode
                 }
