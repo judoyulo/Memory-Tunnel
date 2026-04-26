@@ -105,6 +105,8 @@
 		616F463C1F1E291F1092BA0B /* ConversationTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationTimelineView.swift; sourceTree = "<group>"; };
 		622DA1C3E1E0F8D49A5B16C2 /* InviteFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFlowView.swift; sourceTree = "<group>"; };
 		690DD1E433D7B3C88548F7B9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1A2222222222222222222222 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		1A4444444444444444444444 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		6B9655209F364668AF229806 /* TimelineMemoryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineMemoryCard.swift; sourceTree = "<group>"; };
 		7163AA5FA993CC04AB76B3EA /* MemoryEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryEditSheet.swift; sourceTree = "<group>"; };
 		75EE9505EE7A0C330E994154 /* MemoryMetadataFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryMetadataFields.swift; sourceTree = "<group>"; };
@@ -463,6 +465,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					111A2F5F2D5A3881A8DF721F = {
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = 1BFE5FFC2FE606BC346722C4 /* Build configuration list for PBXProject "MemoryTunnel" */;
 			developmentRegion = en;
