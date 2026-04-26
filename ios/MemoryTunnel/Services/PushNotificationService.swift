@@ -81,7 +81,10 @@ final class NotificationRouter: ObservableObject {
             return
         }
         if url.host == "invite", let token = url.pathComponents.dropFirst().first {
-            DeepLinkStore.shared.pendingInvitationToken = token
+            // DeepLinkStore is @MainActor; hop the actor boundary
+            Task { @MainActor in
+                DeepLinkStore.shared.pendingInvitationToken = token
+            }
         }
     }
 }
