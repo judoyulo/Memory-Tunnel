@@ -29,10 +29,17 @@ module Api
           user.save!
         end
 
-        # Demo account: skip Twilio, use fixed code
+        # Demo account: skip Twilio, use fixed code (so App Store reviewers can sign in)
         if phone == DEMO_PHONE
           user.generate_otp!(override_code: DEMO_OTP)
           return render json: { message: "OTP sent" }, status: :ok
+        end
+
+        # In dev/test, generate a local bcrypt OTP and return it so devs/specs can
+        # verify without hitting Twilio. In production we delegate to Twilio Verify.
+        if Rails.env.local?
+          code = user.generate_otp!
+          return render json: { message: "OTP sent", dev_code: code }, status: :ok
         end
 
         TwilioOtpJob.perform_later(phone: phone)
