@@ -68,6 +68,9 @@ struct SettingsView: View {
         // Clear auth
         appState.signOut()
 
+        // Force full onboarding on next login (overrides returning-user shortcut)
+        UserDefaults.standard.set(true, forKey: "forceOnboardingAfterReset")
+
         // Clear onboarding flags
         UserDefaults.standard.removeObject(forKey: "smartStartCompleted")
 
