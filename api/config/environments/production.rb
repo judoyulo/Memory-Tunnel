@@ -3,6 +3,12 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  # URL helpers (invitation_preview_url etc) need a host to generate absolute URLs.
+  # Defaults to the Fly hostname; override via APP_HOST env var if you point a custom domain.
+  app_host = ENV.fetch("APP_HOST", "memory-tunnel-api.fly.dev")
+  config.action_controller.default_url_options = { host: app_host, protocol: "https" }
+  config.action_mailer.default_url_options     = { host: app_host, protocol: "https" }
+
   # Code is not reloaded between requests.
   config.enable_reloading = false
 

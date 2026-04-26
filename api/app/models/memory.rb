@@ -27,6 +27,7 @@ class Memory < ApplicationRecord
   end
 
   def signed_url
+    return nil if s3_key.blank? # text + location_checkin memories have no S3 object
     signer = Aws::S3::Presigner.new(client: self.class.s3_client)
     signer.presigned_url(
       :get_object,
