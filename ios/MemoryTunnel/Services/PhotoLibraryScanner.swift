@@ -25,6 +25,9 @@ struct FaceSuggestion: Identifiable {
     let sampleCrop: UIImage
     let recentAssets: [PHAsset]
     let count: Int
+    /// Cluster centroid embedding (L2-normalized). The identity of this person.
+    /// Used to link the face to the chapter so future scans recognize them correctly.
+    let embedding: [Float]
     var name: String = ""
 }
 
@@ -283,7 +286,8 @@ actor PhotoLibraryScanner {
                     id: cluster.id,
                     sampleCrop: crop,
                     recentAssets: cluster.assets,
-                    count: cluster.count
+                    count: cluster.count,
+                    embedding: cluster.centroid
                 )
             }
     }

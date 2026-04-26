@@ -445,18 +445,24 @@ private struct FeedCardFullScreen: View {
                     endPoint: .bottom
                 )
 
-                // Share icon (top-right corner)
+                // Share pill (top-right corner) — labeled and high-contrast for discoverability
                 if photo != nil {
                     VStack {
                         HStack {
                             Spacer()
                             Button { showShareSheet = true } label: {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 40, height: 40)
-                                    .background(.ultraThinMaterial.opacity(0.6))
-                                    .clipShape(Circle())
+                                HStack(spacing: 6) {
+                                    Image(systemName: "square.and.arrow.up.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                    Text(L.share)
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 9)
+                                .background(.black.opacity(0.55))
+                                .clipShape(Capsule())
+                                .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
                             }
                             .padding(.trailing, Spacing.md)
                             .padding(.top, 60)

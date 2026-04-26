@@ -7,10 +7,12 @@
   <meta name="description" content="Someone wants to share memories with you." />
 
   <!-- Open Graph (iMessage / Twitter link preview) -->
+  <meta property="og:site_name" content="Memory Tunnel" />
   <% if @memory %>
   <meta property="og:image"       content="<%= @preview_url %>" />
-  <meta property="og:title"       content="<%= "#{@sender.display_name} is sharing a memory with you." %>" />
-  <meta property="og:description" content="Open in Memory Tunnel to see it." />
+  <meta property="og:title"       content="<%= "#{@sender.display_name} sent you a memory on Memory Tunnel" %>" />
+  <meta property="og:description" content="A photo for the people who matter most. Tap to open." />
+  <meta name="twitter:card"       content="summary_large_image" />
   <% end %>
 
   <style>
@@ -99,11 +101,40 @@
       margin-top: 12px;
     }
 
+    /* Brand badge — top of page so the receiver knows what app this is */
+    .brand-badge {
+      position: fixed;
+      top: env(safe-area-inset-top, 16px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      margin-top: 12px;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 999px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .brand-mark {
+      color: var(--accent);
+      font-size: 10px;
+      line-height: 1;
+    }
+    .brand-name { line-height: 1; }
+
     /* No-photo fallback */
     .no-photo body { justify-content: center; }
     .no-photo .card { color: var(--label); padding: 48px 24px; }
     .no-photo .cta  { background: var(--accent); }
     .no-photo .sub  { color: var(--secondary); }
+    .no-photo .brand-badge { background: var(--label); }
   </style>
 
   <% if @invitation.present? %>

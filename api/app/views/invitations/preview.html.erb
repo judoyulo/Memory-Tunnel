@@ -2,11 +2,17 @@
   <img src="<%= @preview_url %>" alt="Shared memory" />
 </div>
 
+<!-- Top-of-page brand badge so receivers know what app this is -->
+<div class="brand-badge">
+  <span class="brand-mark">●</span>
+  <span class="brand-name">Memory Tunnel</span>
+</div>
+
 <div class="card">
-  <p class="sender"><%= @sender.display_name %> shared a memory with you</p>
-  <h1 class="headline">Open it in Memory Tunnel</h1>
+  <p class="sender"><%= @sender.display_name %> shared a memory with you on <strong>Memory Tunnel</strong></p>
+  <h1 class="headline">For the people who matter most</h1>
   <a href="#" class="cta" onclick="openApp(); return false;">
-    Open Memory Tunnel
+    Open in Memory Tunnel
   </a>
-  <p class="sub">Free app · No spam · Only the two of you</p>
+  <p class="sub">Free app · No ads · Just the two of you</p>
 </div>

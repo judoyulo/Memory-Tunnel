@@ -156,6 +156,19 @@ final class ChapterCreationViewModel: ObservableObject {
                 let name = chapterName.trimmingCharacters(in: .whitespaces)
                 let chapter = try await APIClient.shared.createChapter(name: name.isEmpty ? nil : name)
                 createdChapterID = chapter.id
+
+                // Pin the bubble's face embedding to this chapter so future face matching
+                // recognizes THIS specific person, not whichever face appears first in
+                // an uploaded photo with multiple people.
+                if let suggestion {
+                    let partnerID = chapter.partner?.id ?? chapter.id
+                    await FaceEmbeddingService.shared.linkFaceToChapter(
+                        embedding: suggestion.embedding,
+                        crop: suggestion.sampleCrop,
+                        partnerID: partnerID,
+                        chapterID: chapter.id
+                    )
+                }
             }
 
             guard let chapterID = createdChapterID else { return }
