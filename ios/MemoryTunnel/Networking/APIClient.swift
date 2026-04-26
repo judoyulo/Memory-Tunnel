@@ -84,6 +84,12 @@ actor APIClient {
         return try await patch("/api/v1/me", body: body)
     }
 
+    /// Permanently deletes the user's account on the server.
+    /// All memories, chapters owned by this user, and S3 media are purged.
+    func deleteAccount() async throws {
+        try await delete("/api/v1/me")
+    }
+
     // MARK: Chapters
 
     func chapters() async throws -> [Chapter] {

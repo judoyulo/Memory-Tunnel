@@ -106,24 +106,46 @@
     .no-photo .sub  { color: var(--secondary); }
   </style>
 
-  <!-- Branch.io SDK for deferred deep link on install -->
-  <script>
-    (function(b,r,a,n,c,h,_,s,d,k){
-      if(!b[n]){b[n]=function(){b[n]._q.push(arguments)};b[n]._q=[];
-      h=r.createElement(a);h.async=1;h.src=s;d=r.getElementsByTagName(a)[0];
-      d.parentNode.insertBefore(h,d)}
-    })(window,document,"script","branch","https://cdn.branch.io/branch-latest.min.js");
+  <% if @invitation.present? %>
+    <!-- Smart App Banner for installed-app users -->
+    <% if ENV['IOS_APP_ID'].present? %>
+    <meta name="apple-itunes-app" content="app-id=<%= ENV['IOS_APP_ID'] %>, app-argument=memorytunnel://invite/<%= @invitation.token %>" />
+    <% end %>
 
-    branch("init", "<%= ENV.fetch('BRANCH_KEY', '') %>", function(err, data) {});
+    <!-- Branch.io SDK for deferred deep link on install (preserves invite token across App Store install) -->
+    <% if ENV['BRANCH_KEY'].present? && @branch_data.present? %>
+    <script>
+      (function(b,r,a,n,c,h,_,s,d,k){
+        if(!b[n]){b[n]=function(){b[n]._q.push(arguments)};b[n]._q=[];
+        h=r.createElement(a);h.async=1;h.src=s;d=r.getElementsByTagName(a)[0];
+        d.parentNode.insertBefore(h,d)}
+      })(window,document,"script","branch","https://cdn.branch.io/branch-latest.min.js");
 
-    function openApp() {
-      branch("link", {
-        data: <%= @branch_data.to_json.html_safe %>
-      }, function(err, link) {
-        if (link) window.location.href = link;
-      });
-    }
-  </script>
+      branch("init", "<%= ENV['BRANCH_KEY'] %>", function(err, data) {});
+
+      function openApp() {
+        branch("link", {
+          data: <%= @branch_data.to_json.html_safe %>
+        }, function(err, link) {
+          if (link) window.location.href = link;
+          else window.location.href = "<%= ENV.fetch('APP_STORE_URL', 'https://apps.apple.com/') %>";
+        });
+      }
+    </script>
+    <% else %>
+    <!-- No Branch key configured — fall back to App Store + custom URL scheme -->
+    <script>
+      function openApp() {
+        // Try opening installed app first
+        window.location.href = "memorytunnel://invite/<%= @invitation.token %>";
+        // After 2.5s, redirect to App Store if app didn't open
+        setTimeout(function() {
+          window.location.href = "<%= ENV.fetch('APP_STORE_URL', 'https://apps.apple.com/') %>";
+        }, 2500);
+      }
+    </script>
+    <% end %>
+  <% end %>
 </head>
 <body>
   <%= yield %>

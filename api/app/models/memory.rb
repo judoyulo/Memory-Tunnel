@@ -12,6 +12,10 @@ class Memory < ApplicationRecord
   validates :visibility,      presence: true
   validates :media_type,      presence: true
 
+  # Schedule S3 object for purge when this memory is destroyed.
+  # Runs after the DB transaction commits so we never orphan a deletion.
+  after_destroy_commit :enqueue_s3_purge
+
   # ── Signed URL ───────────────────────────────────────────────────────────────
   # Returns a short-lived signed URL for the client to render the photo.
   # TTL is 1 hour; client should call GET /chapters/:id/memories/:id/refresh_url
@@ -59,5 +63,12 @@ class Memory < ApplicationRecord
   # Effective date for sorting and "N years ago" calculation
   def effective_date
     event_date&.to_datetime || taken_at || created_at
+  end
+
+  private
+
+  def enqueue_s3_purge
+    return if s3_key.blank?
+    S3MediaPurgeJob.perform_later([s3_key])
   end
 end
