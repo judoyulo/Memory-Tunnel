@@ -49,25 +49,11 @@ actor FaceEmbeddingService {
 
     static let shared = FaceEmbeddingService()
 
-    /// Cosine similarity threshold for strict "same person" identity match.
-    /// MobileFaceNet/ArcFace recommended range: 0.40-0.55 for ~99% verification accuracy.
-    /// 0.45 keeps siblings/parents-and-kids in separate clusters in everyday camera roll.
-    static let matchThreshold: Float = 0.45
+    /// Cosine similarity threshold for "same person."
+    static let matchThreshold: Float = 0.30
 
-    /// Looser threshold for surfacing "likely the same person" suggestions in non-critical
-    /// flows (feed face matching, face picker auto-suggest). Wrong matches are recoverable
-    /// here because the user gets to confirm before any data is committed.
-    static let suggestThreshold: Float = 0.35
-
-    /// Threshold for merging two cluster CENTROIDS during post-clustering pass.
-    /// Centroids are averages so similarity drops naturally — slightly looser than match.
-    /// Still strict enough to keep different people in separate clusters.
-    static let mergeThreshold: Float = 0.40
-
-    /// Threshold for collapsing duplicate FaceRecord entries (same person, multiple uploads).
-    /// Used by storeWithDedup to prevent face_embeddings.json from bloating linearly with
-    /// every photo. Slightly stricter than match because we want to be sure before merging.
-    static let dedupThreshold: Float = 0.50
+    /// Fixed merge threshold for post-clustering pass.
+    static let mergeThreshold: Float = 0.25
 
     private var model: MLModel?
     private let store = FaceStore()
@@ -78,57 +64,28 @@ actor FaceEmbeddingService {
 
     /// Detect, embed, and match all faces in a photo.
     /// Call fire-and-forget after each successful memory upload.
-    ///
-    /// Dedup behavior: if a detected face is very similar (>= dedupThreshold) to an
-    /// existing FaceRecord, we merge into that record's centroid rather than inserting
-    /// a new one. This keeps face_embeddings.json from growing linearly with every photo.
     func processFaces(in image: UIImage) async -> [FaceCandidate] {
         guard let cgImage = image.cgImage else { return [] }
 
         let observations = await detectFaces(in: cgImage)
         guard !observations.isEmpty else { return [] }
 
-        var allRecords = await store.all()
+        let allRecords = await store.all()
         var candidates: [FaceCandidate] = []
 
         for obs in observations {
             guard let result = await embedding(for: obs, in: cgImage) else { continue }
 
-            // Find the most similar existing record (whether tagged or untagged)
-            var bestExistingID: UUID?
-            var bestExistingSim: Float = -1
-            for record in allRecords {
-                guard record.embedding.count == result.embedding.count else { continue }
-                let sim = cosineSimilarity(result.embedding, record.embedding)
-                if sim > bestExistingSim { bestExistingSim = sim; bestExistingID = record.id }
-            }
-
-            // Used by the matchedPartnerID hint on the candidate (uses normal match threshold)
-            let taggedMatch: (record: FaceRecord, similarity: Float)? = {
-                guard let id = bestExistingID,
-                      let rec = allRecords.first(where: { $0.id == id }),
-                      bestExistingSim >= Self.matchThreshold else { return nil }
-                return (rec, bestExistingSim)
-            }()
+            let match = findBestMatch(result.embedding, in: allRecords)
 
             let candidateID: UUID
-            if let id = bestExistingID, bestExistingSim >= Self.dedupThreshold,
-               let existing = allRecords.first(where: { $0.id == id }) {
-                // Strong dedup match — collapse into existing record by averaging the
-                // embedding (keep its identity/partner/chapter fields). This converges
-                // toward a stable centroid as more photos of the same person come in.
-                candidateID = id
-                let merged = averageEmbeddings(existing.embedding, result.embedding)
-                var updated = existing
-                updated.embedding = merged
-                if updated.cropJPEG == nil {
-                    updated.cropJPEG = result.crop.jpegData(compressionQuality: 0.7)
-                }
-                try? await store.upsert(updated)
-                // Reflect locally so subsequent observations in the same call see it
-                if let idx = allRecords.firstIndex(where: { $0.id == id }) {
-                    allRecords[idx] = updated
-                }
+            if let match {
+                candidateID = match.record.id
+            } else if let nearUntagged = nearestUntagged(result.embedding, in: allRecords) {
+                // Reuse existing similar untagged record instead of inflating the store.
+                // Same-person photos under different lighting often score 0.25-0.30 — below
+                // matchThreshold but clearly the same identity.
+                candidateID = nearUntagged.id
             } else {
                 let newID = UUID()
                 candidateID = newID
@@ -141,15 +98,14 @@ actor FaceEmbeddingService {
                     cropJPEG: result.crop.jpegData(compressionQuality: 0.7)
                 )
                 try? await store.upsert(record)
-                allRecords.append(record)
             }
 
             candidates.append(FaceCandidate(
                 faceID: candidateID,
                 boundingBox: obs.boundingBox,
                 crop: result.crop,
-                matchedPartnerID: taggedMatch?.record.partnerID,
-                matchSimilarity: taggedMatch?.similarity ?? 0
+                matchedPartnerID: match?.record.partnerID,
+                matchSimilarity: match?.similarity ?? 0
             ))
         }
 
@@ -410,6 +366,24 @@ actor FaceEmbeddingService {
 
     // MARK: - Matching
 
+    /// Find the nearest UNTAGGED record above the (looser) mergeThreshold.
+    /// Used to dedup near-duplicate untagged faces from successive uploads of the
+    /// same person under different lighting/expressions.
+    private func nearestUntagged(
+        _ embedding: [Float],
+        in records: [FaceRecord]
+    ) -> FaceRecord? {
+        var best: (record: FaceRecord, similarity: Float)?
+        for record in records where record.partnerID == nil && record.embedding.count == embedding.count {
+            let sim = cosineSimilarity(embedding, record.embedding)
+            if best == nil || sim > best!.similarity {
+                best = (record, sim)
+            }
+        }
+        guard let best, best.similarity >= Self.mergeThreshold else { return nil }
+        return best.record
+    }
+
     private func findBestMatch(
         _ embedding: [Float],
         in records: [FaceRecord]
@@ -445,15 +419,6 @@ actor FaceEmbeddingService {
         let n = s.squareRoot()
         guard n > 0 else { return v }
         return v.map { $0 / n }
-    }
-
-    /// Element-wise average of two L2-normalized embeddings, re-normalized.
-    /// Used to maintain a running centroid as new photos of the same person come in.
-    private func averageEmbeddings(_ a: [Float], _ b: [Float]) -> [Float] {
-        guard a.count == b.count else { return a }
-        var out = [Float](repeating: 0, count: a.count)
-        for i in 0 ..< a.count { out[i] = (a[i] + b[i]) * 0.5 }
-        return l2Normalize(out)
     }
 }
 

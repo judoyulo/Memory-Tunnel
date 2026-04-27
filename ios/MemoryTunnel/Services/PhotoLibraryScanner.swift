@@ -110,7 +110,7 @@ actor PhotoLibraryScanner {
                 PhotoLibraryScanner.scanProgress.update(scanned: 0, total: totalPhotos)
 
                 let scanStart = Date()
-                let deadline = scanStart.addingTimeInterval(120) // doubled from 60s
+                let deadline = scanStart.addingTimeInterval(60)
 
                 var clusters: [LocalCluster] = []
                 var photosSinceLastEmit = 0
@@ -119,96 +119,97 @@ actor PhotoLibraryScanner {
                 var facesDetected = 0
                 var facesAligned = 0
 
-                // Pipeline image loading: 3 concurrent PHAsset loads keep the pipe full
-                // while the previous photo's faces are being embedded and clustered. ~3x
-                // throughput vs serial load for sparse iCloud-backed libraries.
-                let concurrency = 3
+                // Parallel batched processing: image load + face detect + embed run
+                // concurrently per batch. Clustering remains serial because each new face
+                // needs to be matched against the current set of centroids.
+                let batchSize = 6
+                var batchIndex = 0
 
-                await withTaskGroup(of: (asset: PHAsset, image: UIImage?).self) { group in
-                    var nextIndex = 0
-                    @Sendable func enqueueNext() -> Bool {
-                        guard nextIndex < assetList.count else { return false }
-                        let asset = assetList[nextIndex]
-                        nextIndex += 1
-                        group.addTask { [weak self] in
-                            let img = await self?.loadImage(for: asset, targetSize: 1024)
-                            return (asset, img)
+                while batchIndex < assetList.count {
+                    if Date() > deadline { break }
+                    if Task.isCancelled { break }
+                    let clusterCount = clusters.filter { $0.count >= minAppearances }.count
+                    if photosProcessed >= minPhotos && clusterCount >= targetClusters { break }
+
+                    let batchEnd = min(batchIndex + batchSize, assetList.count)
+                    let batchAssets = Array(assetList[batchIndex..<batchEnd])
+
+                    let results: [PhotoFaceResult] = await withTaskGroup(of: PhotoFaceResult?.self) { group in
+                        for asset in batchAssets {
+                            group.addTask {
+                                guard let image = await self.loadImage(for: asset, targetSize: 1024) else { return nil }
+                                guard let cgImage = image.cgImage else { return nil }
+                                let observations = await FaceEmbeddingService.shared.detectFaces(in: cgImage)
+                                var faces: [PhotoFaceResult.Face] = []
+                                for obs in observations {
+                                    if let r = await FaceEmbeddingService.shared.embedding(for: obs, in: cgImage) {
+                                        faces.append(.init(embedding: r.embedding, crop: r.crop, method: r.method))
+                                    }
+                                }
+                                return PhotoFaceResult(asset: asset, faces: faces)
+                            }
                         }
-                        return true
+                        var collected: [PhotoFaceResult] = []
+                        for await res in group { if let r = res { collected.append(r) } }
+                        return collected
                     }
 
-                    // Prime the pipeline
-                    for _ in 0 ..< concurrency { _ = enqueueNext() }
-
-                    while let loaded = await group.next() {
-                        if Task.isCancelled || Date() > deadline { break }
-
-                        let clusterCount = clusters.filter { $0.count >= minAppearances }.count
-                        if photosProcessed >= minPhotos && clusterCount >= targetClusters { break }
-
-                        // Refill the queue
-                        _ = enqueueNext()
-
-                        guard let image = loaded.image, let cgImage = image.cgImage else { continue }
-                        let asset = loaded.asset
+                    // Serial clustering of all faces in this batch
+                    for result in results {
                         photosProcessed += 1
-                        PhotoLibraryScanner.scanProgress.update(scanned: photosProcessed, total: totalPhotos)
-
-                        let observations = await FaceEmbeddingService.shared.detectFaces(in: cgImage)
-                        guard !observations.isEmpty else { continue }
-
-                        for obs in observations {
-                            guard let result = await FaceEmbeddingService.shared.embedding(
-                                for: obs, in: cgImage
-                            ) else { continue }
-
+                        for face in result.faces {
                             facesDetected += 1
-                            if result.method == .aligned { facesAligned += 1 }
+                            if face.method == .aligned { facesAligned += 1 }
 
+                            // Centroid-based clustering
                             var bestIdx: Int?
                             var bestSim: Float = -1
                             for (i, cluster) in clusters.enumerated() {
-                                let sim = FaceEmbeddingService.shared.cosineSimilarity(
-                                    result.embedding, cluster.centroid
-                                )
+                                let sim = FaceEmbeddingService.shared.cosineSimilarity(face.embedding, cluster.centroid)
                                 if sim > bestSim { bestSim = sim; bestIdx = i }
                             }
 
                             if let idx = bestIdx, bestSim >= FaceEmbeddingService.matchThreshold {
                                 clusters[idx].count += 1
-                                clusters[idx].assets.append(asset)
-                                clusters[idx].addEmbedding(result.embedding)
-                                if clusters[idx].bestCrop == nil { clusters[idx].bestCrop = result.crop }
+                                clusters[idx].assets.append(result.asset)
+                                clusters[idx].addEmbedding(face.embedding)
+                                if clusters[idx].bestCrop == nil {
+                                    clusters[idx].bestCrop = face.crop
+                                    clusters[idx].bestCropEmbedding = face.embedding
+                                }
                             } else {
                                 clusters.append(LocalCluster(
                                     id: UUID(),
-                                    centroid: result.embedding,
-                                    embeddingSum: result.embedding,
+                                    centroid: face.embedding,
+                                    embeddingSum: face.embedding,
+                                    embeddings: [face.embedding],
                                     count: 1,
-                                    bestCrop: result.crop,
-                                    assets: [asset],
-                                    members: [result.embedding]
+                                    bestCrop: face.crop,
+                                    assets: [result.asset],
+                                    bestCropEmbedding: face.embedding
                                 ))
                             }
                         }
+                    }
 
-                        photosSinceLastEmit += 1
-                        if photosSinceLastEmit >= emitInterval {
-                            photosSinceLastEmit = 0
-                            splitDriftedClusters(&clusters)
-                            mergeClusters(&clusters)
-                            let snapshot = buildSuggestions(from: clusters, minAppearances: minAppearances, maxFaces: maxFaces)
-                            if !snapshot.isEmpty {
-                                continuation.yield(snapshot)
-                            }
+                    PhotoLibraryScanner.scanProgress.update(scanned: photosProcessed, total: totalPhotos)
+
+                    photosSinceLastEmit += batchAssets.count
+                    if photosSinceLastEmit >= emitInterval {
+                        photosSinceLastEmit = 0
+                        mergeClusters(&clusters)
+                        let snapshot = buildSuggestions(from: clusters, minAppearances: minAppearances, maxFaces: maxFaces)
+                        if !snapshot.isEmpty {
+                            continuation.yield(snapshot)
                         }
                     }
-                    group.cancelAll()
+
+                    batchIndex = batchEnd
                 }
 
                 // Final merge + emit
-                splitDriftedClusters(&clusters)
                 mergeClusters(&clusters)
+                splitWideClusters(&clusters)
                 let final = buildSuggestions(from: clusters, minAppearances: minAppearances, maxFaces: maxFaces)
 
                 // Log scan summary
@@ -240,19 +241,30 @@ actor PhotoLibraryScanner {
 
     // MARK: - Private
 
+    /// Per-asset result of the parallel face-extraction step (before clustering).
+    private struct PhotoFaceResult {
+        struct Face {
+            let embedding: [Float]
+            let crop: UIImage
+            let method: FaceEmbeddingService.EmbeddingMethod
+        }
+        let asset: PHAsset
+        let faces: [Face]
+    }
+
     private struct LocalCluster {
         let id: UUID
         var centroid: [Float]       // L2-normalized average embedding
         var embeddingSum: [Float]   // Running sum for centroid calculation
+        var embeddings: [[Float]]   // Individual member embeddings (for split pass)
         var count: Int
         var bestCrop: UIImage?
         var assets: [PHAsset]
-        /// All member embeddings. Lets us detect a too-spread cluster (drift) and
-        /// split it into two via 2-means rather than letting bad clusters persist.
-        var members: [[Float]]
+        /// Best-crop's matching embedding — used as the "anchor" for sub-cluster splits.
+        var bestCropEmbedding: [Float]?
 
         mutating func addEmbedding(_ emb: [Float]) {
-            members.append(emb)
+            embeddings.append(emb)
             for i in 0 ..< embeddingSum.count { embeddingSum[i] += emb[i] }
             // Recompute centroid: average then L2-normalize
             var avg = embeddingSum.map { $0 / Float(count) }
@@ -262,97 +274,6 @@ actor PhotoLibraryScanner {
             if norm > 0 { avg = avg.map { $0 / norm } }
             centroid = avg
         }
-    }
-
-    /// Detect clusters where the worst-fitting member is far from the centroid (drift)
-    /// and split them via 2-means clustering. Prevents siblings/parents-and-kids from
-    /// staying merged once enough evidence accumulates.
-    private func splitDriftedClusters(_ clusters: inout [LocalCluster]) {
-        // A cluster is "drifted" if its weakest member is below match threshold against centroid
-        let driftCutoff: Float = 0.40 // weaker than matchThreshold(0.45) → likely a different person
-
-        var i = 0
-        while i < clusters.count {
-            let c = clusters[i]
-            guard c.members.count >= 4 else { i += 1; continue }
-
-            // Find weakest similarity to centroid
-            var minSim: Float = 1.0
-            for m in c.members {
-                let s = FaceEmbeddingService.shared.cosineSimilarity(m, c.centroid)
-                if s < minSim { minSim = s }
-            }
-            guard minSim < driftCutoff else { i += 1; continue }
-
-            // Run 2-means: pick two seeds (most-distant pair), assign each member, recompute.
-            var (seedA, seedB) = (c.members[0], c.members[1])
-            var maxDist: Float = -1
-            for a in c.members {
-                for b in c.members {
-                    let d = FaceEmbeddingService.shared.cosineSimilarity(a, b)
-                    if d < maxDist || maxDist < 0 { maxDist = d; seedA = a; seedB = b }
-                }
-            }
-
-            for _ in 0 ..< 5 { // 5 iters is plenty for 2 means
-                var sumA = [Float](repeating: 0, count: seedA.count)
-                var sumB = [Float](repeating: 0, count: seedB.count)
-                var ca = 0, cb = 0
-                for m in c.members {
-                    let sa = FaceEmbeddingService.shared.cosineSimilarity(m, seedA)
-                    let sb = FaceEmbeddingService.shared.cosineSimilarity(m, seedB)
-                    if sa >= sb {
-                        for k in 0 ..< m.count { sumA[k] += m[k] }
-                        ca += 1
-                    } else {
-                        for k in 0 ..< m.count { sumB[k] += m[k] }
-                        cb += 1
-                    }
-                }
-                if ca > 0 { seedA = l2NormalizeStatic(sumA.map { $0 / Float(ca) }) }
-                if cb > 0 { seedB = l2NormalizeStatic(sumB.map { $0 / Float(cb) }) }
-            }
-
-            // Final assignment
-            var membersA: [[Float]] = [], membersB: [[Float]] = []
-            var assetsA: [PHAsset] = [], assetsB: [PHAsset] = []
-            var sumA = [Float](repeating: 0, count: seedA.count)
-            var sumB = [Float](repeating: 0, count: seedB.count)
-            for (idx, m) in c.members.enumerated() {
-                let sa = FaceEmbeddingService.shared.cosineSimilarity(m, seedA)
-                let sb = FaceEmbeddingService.shared.cosineSimilarity(m, seedB)
-                if sa >= sb {
-                    membersA.append(m); for k in 0..<m.count { sumA[k] += m[k] }
-                    if idx < c.assets.count { assetsA.append(c.assets[idx]) }
-                } else {
-                    membersB.append(m); for k in 0..<m.count { sumB[k] += m[k] }
-                    if idx < c.assets.count { assetsB.append(c.assets[idx]) }
-                }
-            }
-
-            // Don't split if one side is degenerate (< 2 members)
-            guard membersA.count >= 2 && membersB.count >= 2 else { i += 1; continue }
-
-            let clusterA = LocalCluster(
-                id: UUID(), centroid: seedA, embeddingSum: sumA,
-                count: membersA.count, bestCrop: c.bestCrop, assets: assetsA, members: membersA
-            )
-            let clusterB = LocalCluster(
-                id: UUID(), centroid: seedB, embeddingSum: sumB,
-                count: membersB.count, bestCrop: nil, assets: assetsB, members: membersB
-            )
-            clusters[i] = clusterA
-            clusters.insert(clusterB, at: i + 1)
-            i += 2
-        }
-    }
-
-    private func l2NormalizeStatic(_ v: [Float]) -> [Float] {
-        var s: Float = 0
-        for x in v { s += x * x }
-        let n = s.squareRoot()
-        guard n > 0 else { return v }
-        return v.map { $0 / n }
     }
 
     /// Post-clustering merge: merge clusters whose centroids are similar.
@@ -368,7 +289,7 @@ actor PhotoLibraryScanner {
                     if sim >= FaceEmbeddingService.mergeThreshold {
                         clusters[i].count += clusters[j].count
                         clusters[i].assets.append(contentsOf: clusters[j].assets)
-                        clusters[i].members.append(contentsOf: clusters[j].members)
+                        clusters[i].embeddings.append(contentsOf: clusters[j].embeddings)
                         for k in 0 ..< clusters[i].embeddingSum.count {
                             clusters[i].embeddingSum[k] += clusters[j].embeddingSum[k]
                         }
@@ -387,6 +308,117 @@ actor PhotoLibraryScanner {
                 if merged { break }
             }
         }
+    }
+
+    /// Post-merge split pass: detects "drifted" clusters where the average member
+    /// is too far from the centroid (indicating the cluster combined multiple
+    /// identities) and splits them via 2-means.
+    ///
+    /// Uses cohesion threshold tighter than mergeThreshold so genuine same-person
+    /// clusters with diverse views are NOT split unnecessarily.
+    private func splitWideClusters(_ clusters: inout [LocalCluster]) {
+        let cohesionFloor: Float = FaceEmbeddingService.matchThreshold - 0.05  // 0.25 by default
+        var i = 0
+        while i < clusters.count {
+            let c = clusters[i]
+            // Need at least 4 members to even consider a split
+            guard c.embeddings.count >= 4 else { i += 1; continue }
+
+            // Check cohesion: how far is the worst member from the centroid?
+            let sims = c.embeddings.map {
+                FaceEmbeddingService.shared.cosineSimilarity($0, c.centroid)
+            }
+            let minSim = sims.min() ?? 1.0
+            // Cluster is cohesive enough — leave it alone.
+            if minSim >= cohesionFloor { i += 1; continue }
+
+            // Cluster is drifted. 2-means split.
+            if let (a, b) = twoMeans(c.embeddings) {
+                // Partition assets and embeddings into the two new clusters
+                var aEmbs: [[Float]] = [], bEmbs: [[Float]] = []
+                var aAssets: [PHAsset] = [], bAssets: [PHAsset] = []
+                for (idx, emb) in c.embeddings.enumerated() {
+                    let simA = FaceEmbeddingService.shared.cosineSimilarity(emb, a)
+                    let simB = FaceEmbeddingService.shared.cosineSimilarity(emb, b)
+                    if simA >= simB {
+                        aEmbs.append(emb); aAssets.append(c.assets[idx])
+                    } else {
+                        bEmbs.append(emb); bAssets.append(c.assets[idx])
+                    }
+                }
+
+                // Don't split if one side is empty or nearly empty
+                guard aEmbs.count >= 2, bEmbs.count >= 2 else { i += 1; continue }
+
+                let clusterA = clusterFrom(embeddings: aEmbs, assets: aAssets, bestCrop: c.bestCrop, bestCropEmbedding: c.bestCropEmbedding)
+                let clusterB = clusterFrom(embeddings: bEmbs, assets: bAssets, bestCrop: nil, bestCropEmbedding: nil)
+
+                clusters[i] = clusterA
+                clusters.insert(clusterB, at: i + 1)
+                i += 2
+            } else {
+                i += 1
+            }
+        }
+    }
+
+    /// 2-means: partition embeddings into 2 clusters by farthest-pair seed.
+    /// Returns the two centroids, or nil if degenerate.
+    private func twoMeans(_ embeddings: [[Float]]) -> ([Float], [Float])? {
+        guard embeddings.count >= 2 else { return nil }
+        // Seed: pick the two embeddings that are FARTHEST apart (lowest cosine sim).
+        var lowestSim: Float = 1.0
+        var seedA = 0, seedB = 1
+        for i in 0 ..< embeddings.count {
+            for j in (i + 1) ..< embeddings.count {
+                let s = FaceEmbeddingService.shared.cosineSimilarity(embeddings[i], embeddings[j])
+                if s < lowestSim { lowestSim = s; seedA = i; seedB = j }
+            }
+        }
+        var a = embeddings[seedA]
+        var b = embeddings[seedB]
+        // 5 Lloyd iterations is plenty for 2-means in this regime
+        for _ in 0 ..< 5 {
+            var aSum = [Float](repeating: 0, count: a.count); var aCount = 0
+            var bSum = [Float](repeating: 0, count: a.count); var bCount = 0
+            for emb in embeddings {
+                let simA = FaceEmbeddingService.shared.cosineSimilarity(emb, a)
+                let simB = FaceEmbeddingService.shared.cosineSimilarity(emb, b)
+                if simA >= simB {
+                    for k in 0 ..< emb.count { aSum[k] += emb[k] }; aCount += 1
+                } else {
+                    for k in 0 ..< emb.count { bSum[k] += emb[k] }; bCount += 1
+                }
+            }
+            guard aCount > 0, bCount > 0 else { return nil }
+            a = normalize(aSum.map { $0 / Float(aCount) })
+            b = normalize(bSum.map { $0 / Float(bCount) })
+        }
+        return (a, b)
+    }
+
+    private func normalize(_ v: [Float]) -> [Float] {
+        var norm: Float = 0
+        for x in v { norm += x * x }
+        norm = norm.squareRoot()
+        guard norm > 0 else { return v }
+        return v.map { $0 / norm }
+    }
+
+    private func clusterFrom(embeddings: [[Float]], assets: [PHAsset], bestCrop: UIImage?, bestCropEmbedding: [Float]?) -> LocalCluster {
+        var sum = [Float](repeating: 0, count: embeddings[0].count)
+        for e in embeddings { for k in 0 ..< sum.count { sum[k] += e[k] } }
+        let centroid = normalize(sum.map { $0 / Float(embeddings.count) })
+        return LocalCluster(
+            id: UUID(),
+            centroid: centroid,
+            embeddingSum: sum,
+            embeddings: embeddings,
+            count: embeddings.count,
+            bestCrop: bestCrop,
+            assets: assets,
+            bestCropEmbedding: bestCropEmbedding
+        )
     }
 
     private func buildSuggestions(from clusters: [LocalCluster], minAppearances: Int, maxFaces: Int) -> [FaceSuggestion] {
