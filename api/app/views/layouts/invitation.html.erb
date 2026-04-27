@@ -164,15 +164,29 @@
       }
     </script>
     <% else %>
-    <!-- No Branch key configured — fall back to App Store + custom URL scheme -->
+    <!-- No Branch key — universal-link style: open installed app, otherwise App Store -->
     <script>
+      var APP_SCHEME_URL = "memorytunnel://invite/<%= @invitation.token %>";
+      var APP_STORE_URL  = "<%= ENV.fetch('APP_STORE_URL', 'https://apps.apple.com/') %>";
+
       function openApp() {
-        // Try opening installed app first
-        window.location.href = "memorytunnel://invite/<%= @invitation.token %>";
-        // After 2.5s, redirect to App Store if app didn't open
+        var clickedAt = Date.now();
+        // Try to open the installed app via URL scheme
+        window.location.href = APP_SCHEME_URL;
+        // If we're still here after ~1.5s the app isn't installed — go to App Store.
+        // Wrapped in visibility check so we don't redirect away from a backgrounded tab.
         setTimeout(function() {
-          window.location.href = "<%= ENV.fetch('APP_STORE_URL', 'https://apps.apple.com/') %>";
-        }, 2500);
+          if (document.visibilityState !== "hidden" && (Date.now() - clickedAt) < 2500) {
+            window.location.href = APP_STORE_URL;
+          }
+        }, 1500);
+      }
+
+      // Auto-attempt on page load for iOS users so installed-app handoff feels instant.
+      // Skip auto-attempt if the user got here from the App Store back button.
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !document.referrer.includes("apps.apple.com")) {
+        // Wait briefly so the page has time to render the photo preview first.
+        setTimeout(openApp, 600);
       }
     </script>
     <% end %>

@@ -3,6 +3,11 @@
 class InvitationsController < ActionController::Base
   layout "invitation"
 
+  # Rails app is API-mode by default, which sets Content-Type: application/json on
+  # responses. Force HTML for this controller so receivers see a rendered page,
+  # not raw HTML source.
+  before_action :force_html_response
+
   # GET /i/:token
   def preview
     @invitation = Invitation.active.find_by!(token: params[:token])
@@ -18,5 +23,12 @@ class InvitationsController < ActionController::Base
     }
   rescue ActiveRecord::RecordNotFound
     render "expired", status: :gone
+  end
+
+  private
+
+  def force_html_response
+    request.format = :html
+    response.content_type = "text/html; charset=utf-8"
   end
 end
