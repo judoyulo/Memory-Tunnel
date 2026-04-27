@@ -147,7 +147,8 @@ final class OnboardingViewModel: ObservableObject {
 
     func selectFace(at index: Int) {
         guard index < faceSuggestions.count else { return }
-        stopScan() // Stop scanning so new snapshots don't cause view re-creation
+        // Keep the scan running in the background — by the time user returns
+        // to the bubbles step (after batch creation), more faces may have been found.
         step = .chapterCreation(faceSuggestions[index])
     }
 
