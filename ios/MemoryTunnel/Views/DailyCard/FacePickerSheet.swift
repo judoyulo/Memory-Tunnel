@@ -457,8 +457,9 @@ struct FacePickerSheet: View {
 
         if faces.count == 1 { selectedIndex = 0 }
 
-        // Match faces to chapters
-        let pickerThreshold: Float = 0.20
+        // Match faces to chapters. suggestThreshold is looser than strict identity match
+        // so cross-angle/lighting variations still surface — user confirms before adding.
+        let pickerThreshold: Float = FaceEmbeddingService.suggestThreshold
         for chapter in appState.chapters {
             let partnerID = chapter.partner?.id ?? chapter.id
             let name = chapter.partner?.displayName ?? chapter.name ?? "Unknown"

@@ -193,10 +193,11 @@ actor TodayFeedService {
                 }
                 faceAppearanceCounts[clusterIdx] += 1
 
-                // Check if this face matches any chapter partner
-                // Use a MORE LENIENT threshold (0.20) than strict identity matching (0.30)
-                // because the stored chapter face may be from a different angle/photo
-                let feedMatchThreshold: Float = 0.20
+                // Check if this face matches any chapter partner.
+                // suggestThreshold (0.35) is intentionally looser than the strict identity
+                // matchThreshold (0.45) — false matches in the feed are recoverable because
+                // the user gets to confirm before any photo is added to a chapter.
+                let feedMatchThreshold: Float = FaceEmbeddingService.suggestThreshold
                 var bestMatch: (chapterID: String, partnerName: String, similarity: Float)?
                 for partner in partnerEmbeddings {
                     let sim = FaceEmbeddingService.shared.cosineSimilarity(
@@ -256,9 +257,10 @@ actor TodayFeedService {
         return feed
     }
 
-    /// Dedup threshold — much more lenient than identity matching.
-    /// Same person across very different photos can have similarity 0.15-0.35.
-    private static let dedupThreshold: Float = 0.15
+    /// Dedup threshold — when grouping multiple feed cards of the same person.
+    /// Errs on the side of "same" to avoid showing 5 cards of the same face.
+    /// Slightly looser than suggestThreshold so cross-angle/lighting variations dedup correctly.
+    private static let dedupThreshold: Float = 0.30
 
     /// Find which cluster this embedding belongs to, or create a new one.
     /// Uses centroid averaging for stability (same as PhotoLibraryScanner).
